@@ -76,12 +76,15 @@ header{display:flex;justify-content:space-between;align-items:center;gap:20px;fl
 
 .mes-banner{background:var(--navy);color:#fff;text-align:center;font-family:'Fredoka';font-weight:700;font-size:13px;letter-spacing:1px;padding:8px;border-radius:10px;margin-bottom:10px;}
 
-.semana-completa{margin-top:14px;border-top:1px dashed #eee;padding-top:10px;display:flex;flex-direction:column;gap:12px;}
-.semana-dia{padding-bottom:10px;border-bottom:1px dashed #f3f3f3;}
-.semana-dia:last-child{border-bottom:none;}
-.semana-dia b{font-family:'Fredoka';font-size:13px;color:var(--navy);}
-.semana-dia-hoje b{color:var(--coral);}
-.semana-dia .menu-list{margin-top:4px;}
+/* ---- Modal do cardápio completo ---- */
+.modal-overlay{position:fixed;inset:0;background:rgba(27,42,92,.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal-card{background:#fff;border-radius:18px;padding:22px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.2);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.modal-header h3{font-family:'Fredoka';color:var(--navy);font-size:16px;margin:0;}
+.modal-close{background:none;border:none;font-size:16px;color:var(--ink-soft);cursor:pointer;padding:4px;}
+.dia-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+.dia-tab{border:1px solid #eee;background:#fff;color:var(--ink-soft);font-family:'Fredoka';font-weight:600;font-size:12.5px;padding:7px 12px;border-radius:999px;cursor:pointer;}
+.dia-tab.dia-tab-ativa{background:var(--coral);color:#fff;border-color:var(--coral);}
 
 .news-item{font-size:13px;line-height:1.4;padding:6px 0;border-bottom:1px dashed #eee;}
 .news-item:last-child{border-bottom:none;}

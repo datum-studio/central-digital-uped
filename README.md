@@ -65,7 +65,7 @@ usuarios/{uid}          → { nome, papel }
 cardapio/atual           → { dias: { segunda: {almoco:[...], sobremesa}, ... }, semanaInicio, atualizadoPor }
 destaque/{id}            → { titulo, arquivoUrl, atualizadoEm, atualizadoPor }
 aniversariantes/{id}     → { nome, dia, mes }   (cadastro manual no Console nesta fase)
-comunicados/{id}         → { titulo, corpo, data }   (cadastro manual no Console nesta fase)
+comunicados/{id}         → { titulo, corpo, data, ativo, atualizadoPor }   (já editável pelo painel: Direção)
 ```
 
 `aniversariantes` e `comunicados` já têm leitura pronta na Home — o formulário de

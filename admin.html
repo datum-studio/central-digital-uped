@@ -29,7 +29,12 @@
       <p>Seu usuário ainda não tem um papel atribuído. Peça para a Direção liberar seu acesso no painel administrativo.</p>
     </div>
 
-    <div id="secaoCardapio" class="admin-section" style="display:none;">
+    <!-- MENU: grade de áreas clicáveis, só as que o papel do usuário libera -->
+    <div id="menuSecoes" class="menu-secoes-grid" style="display:none;"></div>
+
+    <!-- ÁREA: Cardápio -->
+    <div id="areaCardapio" class="admin-section area-detalhe" style="display:none;">
+      <a href="#" class="voltar-menu" onclick="mostrarMenu(); return false;">← Voltar ao painel</a>
       <h3>🍽️ Cardápio de Hoje</h3>
       <p style="color:var(--ink-soft);font-size:13.5px;">Preencha o almoço (um item por linha) e a sobremesa de cada dia. Salvar substitui o cardápio atual exibido na home.</p>
       <div id="diasCardapio"></div>
@@ -37,7 +42,9 @@
       <p id="msgCardapio" class="admin-msg"></p>
     </div>
 
-    <div id="secaoDestaque" class="admin-section" style="display:none;">
+    <!-- ÁREA: Destaque -->
+    <div id="areaDestaque" class="admin-section area-detalhe" style="display:none;">
+      <a href="#" class="voltar-menu" onclick="mostrarMenu(); return false;">← Voltar ao painel</a>
       <h3>📌 Documento em Destaque</h3>
       <label>Título</label>
       <input type="text" id="destaqueTitulo" placeholder="Ex.: Novo POP — Administração de Medicamentos">
@@ -49,6 +56,22 @@
       <h3 style="margin-top:28px;">Documentos já publicados</h3>
       <p style="color:var(--ink-soft);font-size:13.5px;">Ocultar tira da Home sem apagar — dá pra reativar quando quiser.</p>
       <div id="listaDestaques">Carregando…</div>
+    </div>
+
+    <!-- ÁREA: Comunicados -->
+    <div id="areaComunicados" class="admin-section area-detalhe" style="display:none;">
+      <a href="#" class="voltar-menu" onclick="mostrarMenu(); return false;">← Voltar ao painel</a>
+      <h3>📢 Direção Comunica</h3>
+      <label>Título</label>
+      <input type="text" id="comunicadoTitulo" placeholder="Ex.: Reunião geral na sexta">
+      <label>Texto do comunicado</label>
+      <textarea id="comunicadoCorpo" rows="3" placeholder="Escreva o aviso aqui..."></textarea>
+      <button onclick="salvarComunicado()">Publicar comunicado</button>
+      <p id="msgComunicado" class="admin-msg"></p>
+
+      <h3 style="margin-top:28px;">Comunicados já publicados</h3>
+      <p style="color:var(--ink-soft);font-size:13.5px;">Ocultar tira da Home sem apagar — dá pra reativar quando quiser (útil quando o aviso ficar obsoleto).</p>
+      <div id="listaComunicados">Carregando…</div>
     </div>
 
   </div>
@@ -66,10 +89,44 @@
     { key: 'domingo', label: 'Domingo' },
   ];
 
+  // Áreas do painel: id da área de permissão, ícone, título e id do elemento HTML.
+  const AREAS = [
+    { area: 'cardapio', icone: '🍽️', titulo: 'Cardápio de Hoje', elId: 'areaCardapio', onAbrir: () => montarFormularioCardapio() },
+    { area: 'destaque', icone: '📌', titulo: 'Documento em Destaque', elId: 'areaDestaque', onAbrir: () => carregarListaDestaques() },
+    { area: 'comunicados', icone: '📢', titulo: 'Direção Comunica', elId: 'areaComunicados', onAbrir: () => carregarListaComunicados() },
+  ];
+
   let usuario = null;
+  let areasLiberadas = [];
 
   function sair() { logout().then(() => window.location.href = 'index.html'); }
 
+  // ---- Navegação do painel (menu de cards -> área específica -> voltar) ----
+  function mostrarMenu() {
+    AREAS.forEach(a => document.getElementById(a.elId).style.display = 'none');
+    document.getElementById('menuSecoes').style.display = 'grid';
+  }
+
+  function abrirArea(area) {
+    document.getElementById('menuSecoes').style.display = 'none';
+    const def = AREAS.find(a => a.area === area);
+    document.getElementById(def.elId).style.display = 'block';
+    def.onAbrir();
+  }
+
+  function montarMenu() {
+    const el = document.getElementById('menuSecoes');
+    el.innerHTML = areasLiberadas.map(def => `
+      <button class="menu-card" onclick="abrirArea('${def.area}')">
+        <span class="menu-card-icone">${def.icone}</span>
+        <span class="menu-card-titulo">${def.titulo}</span>
+        <span class="menu-card-seta">→</span>
+      </button>
+    `).join('');
+    el.style.display = 'grid';
+  }
+
+  // ---- Cardápio ----
   function montarFormularioCardapio() {
     const el = document.getElementById('diasCardapio');
     el.innerHTML = DIAS.map(d => `
@@ -88,7 +145,7 @@
     const msg = document.getElementById('msgCardapio');
     try {
       const doc = await db.collection('cardapio').doc('atual').get();
-      if (!doc.exists) return; // nada salvo ainda — formulário fica em branco mesmo
+      if (!doc.exists) return;
       const dias = doc.data().dias || {};
       DIAS.forEach(d => {
         const dado = dias[d.key];
@@ -127,6 +184,7 @@
     }
   }
 
+  // ---- Destaque ----
   async function salvarDestaque() {
     const msg = document.getElementById('msgDestaque');
     const titulo = document.getElementById('destaqueTitulo').value.trim();
@@ -159,12 +217,14 @@
         const ativo = d.ativo !== false;
         const data = d.atualizadoEm?.toDate ? d.atualizadoEm.toDate().toLocaleDateString('pt-BR') : '';
         return `
-          <div class="destaque-admin-row">
+          <div class="destaque-admin-row ${ativo ? '' : 'linha-oculta'}">
             <div>
               <p class="doc-title" style="margin:0;">${d.titulo || ''}</p>
-              <p class="doc-meta" style="margin:0;">${data} · ${ativo ? 'Visível na Home' : 'Oculto'}</p>
+              <p class="doc-meta" style="margin:0;">
+                ${data} · <span class="status-pill ${ativo ? 'status-visivel' : 'status-oculto'}">${ativo ? 'Visível na Home' : 'Oculto'}</span>
+              </p>
             </div>
-            <button class="btn-toggle ${ativo ? 'ocultar' : 'reativar'}" onclick="alternarDestaque('${doc.id}', ${ativo})">
+            <button class="btn-toggle ${ativo ? 'ocultar' : 'reativar'}" onclick="alternarAtivo('destaque', '${doc.id}', ${ativo}, carregarListaDestaques)">
               ${ativo ? 'Ocultar' : 'Reativar'}
             </button>
           </div>
@@ -176,10 +236,63 @@
     }
   }
 
-  async function alternarDestaque(id, estavaAtivo) {
+  // ---- Comunicados ----
+  async function salvarComunicado() {
+    const msg = document.getElementById('msgComunicado');
+    const titulo = document.getElementById('comunicadoTitulo').value.trim();
+    const corpo = document.getElementById('comunicadoCorpo').value.trim();
+    if (!titulo) { msg.textContent = 'Preencha o título.'; msg.className = 'admin-msg err'; return; }
     try {
-      await db.collection('destaque').doc(id).update({ ativo: !estavaAtivo });
-      carregarListaDestaques();
+      await db.collection('comunicados').add({
+        titulo, corpo, ativo: true,
+        data: firebase.firestore.FieldValue.serverTimestamp(),
+        atualizadoPor: usuario.nome || usuario.email,
+      });
+      msg.textContent = 'Comunicado publicado com sucesso!';
+      msg.className = 'admin-msg ok';
+      document.getElementById('comunicadoTitulo').value = '';
+      document.getElementById('comunicadoCorpo').value = '';
+      carregarListaComunicados();
+    } catch (e) {
+      msg.textContent = 'Erro ao salvar: ' + e.message;
+      msg.className = 'admin-msg err';
+    }
+  }
+
+  async function carregarListaComunicados() {
+    const el = document.getElementById('listaComunicados');
+    try {
+      const snap = await db.collection('comunicados').orderBy('data', 'desc').get();
+      if (snap.empty) { el.innerHTML = '<p class="doc-meta">Nenhum comunicado publicado ainda.</p>'; return; }
+      el.innerHTML = snap.docs.map(doc => {
+        const d = doc.data();
+        const ativo = d.ativo !== false;
+        const data = d.data?.toDate ? d.data.toDate().toLocaleDateString('pt-BR') : '';
+        return `
+          <div class="destaque-admin-row ${ativo ? '' : 'linha-oculta'}">
+            <div>
+              <p class="doc-title" style="margin:0;">${d.titulo || ''}</p>
+              <p class="doc-meta" style="margin:0;">
+                ${data} · <span class="status-pill ${ativo ? 'status-visivel' : 'status-oculto'}">${ativo ? 'Visível na Home' : 'Oculto'}</span>
+              </p>
+            </div>
+            <button class="btn-toggle ${ativo ? 'ocultar' : 'reativar'}" onclick="alternarAtivo('comunicados', '${doc.id}', ${ativo}, carregarListaComunicados)">
+              ${ativo ? 'Ocultar' : 'Reativar'}
+            </button>
+          </div>
+        `;
+      }).join('');
+    } catch (e) {
+      console.error('Erro ao listar comunicados:', e);
+      el.innerHTML = `<p class="doc-meta">Não foi possível carregar a lista (${e.code || e.message}).</p>`;
+    }
+  }
+
+  // ---- Alternar ativo/oculto (reaproveitado por destaque e comunicados) ----
+  async function alternarAtivo(colecao, id, estavaAtivo, recarregar) {
+    try {
+      await db.collection(colecao).doc(id).update({ ativo: !estavaAtivo });
+      recarregar();
     } catch (e) {
       alert('Erro ao atualizar: ' + e.message);
     }
@@ -192,21 +305,14 @@
     document.getElementById('usuarioInfo').textContent =
       `${usuario.nome || usuario.email} · ${usuario.papel || 'sem papel'}`;
 
-    let algumaSecao = false;
+    areasLiberadas = AREAS.filter(def => podeEditar(def.area, usuario.papel));
 
-    if (podeEditar('cardapio', usuario.papel)) {
-      document.getElementById('secaoCardapio').style.display = 'block';
-      montarFormularioCardapio();
-      algumaSecao = true;
-    }
-    if (podeEditar('destaque', usuario.papel)) {
-      document.getElementById('secaoDestaque').style.display = 'block';
-      carregarListaDestaques();
-      algumaSecao = true;
-    }
-    if (!algumaSecao) {
+    if (areasLiberadas.length === 0) {
       document.getElementById('semPermissao').style.display = 'block';
+      return;
     }
+
+    montarMenu();
   })();
 </script>
 </body>

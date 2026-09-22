@@ -213,11 +213,12 @@
     document.getElementById('cardapioConteudo').innerHTML = `<p class="doc-meta">Não foi possível carregar (${e.code || e.message}).</p>`;
   });
 
-  // ---- Comunicados / Direção Comunica ----
-  db.collection('comunicados').orderBy('data', 'desc').limit(3).get().then(snap => {
+  // ---- Comunicados / Direção Comunica (só os ativos, mais recentes primeiro) ----
+  db.collection('comunicados').orderBy('data', 'desc').get().then(snap => {
     const el = document.getElementById('comunicadosConteudo');
-    if (snap.empty) { el.innerHTML = '<p class="doc-meta">Nenhum comunicado no momento.</p>'; return; }
-    el.innerHTML = snap.docs.map(doc => {
+    const visiveis = snap.docs.filter(doc => doc.data().ativo !== false).slice(0, 3);
+    if (visiveis.length === 0) { el.innerHTML = '<p class="doc-meta">Nenhum comunicado no momento.</p>'; return; }
+    el.innerHTML = visiveis.map(doc => {
       const d = doc.data();
       return `<div class="news-item"><b>${d.titulo}</b><br>${d.corpo || ''}</div>`;
     }).join('');

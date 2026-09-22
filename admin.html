@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel — Central Digital UPED</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header style="max-width:760px;margin:24px auto 0;padding:0 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div class="brand">
+      <div class="brand-mark">UP</div>
+      <div>
+        <h1 style="font-size:20px;">Painel Interno</h1>
+        <p id="usuarioInfo">Carregando…</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <a href="index.html" style="color:var(--navy);font-family:'Fredoka';font-weight:600;font-size:13.5px;text-decoration:none;border:1px solid var(--navy);padding:8px 16px;border-radius:8px;">← Voltar para a Home</a>
+      <button onclick="sair()" style="background:none;border:1px solid var(--navy);color:var(--navy);padding:8px 16px;border-radius:8px;font-family:'Fredoka';cursor:pointer;">Sair</button>
+    </div>
+  </header>
+
+  <div class="admin-wrap">
+
+    <div id="semPermissao" class="admin-section" style="display:none;">
+      <h3>Sem acesso liberado</h3>
+      <p>Seu usuário ainda não tem um papel atribuído. Peça para a Direção liberar seu acesso no painel administrativo.</p>
+    </div>
+
+    <div id="secaoCardapio" class="admin-section" style="display:none;">
+      <h3>🍽️ Cardápio de Hoje</h3>
+      <p style="color:var(--ink-soft);font-size:13.5px;">Preencha o almoço (um item por linha) e a sobremesa de cada dia. Salvar substitui o cardápio atual exibido na home.</p>
+      <div id="diasCardapio"></div>
+      <button onclick="salvarCardapio()">Salvar cardápio</button>
+      <p id="msgCardapio" class="admin-msg"></p>
+    </div>
+
+    <div id="secaoDestaque" class="admin-section" style="display:none;">
+      <h3>📌 Documento em Destaque</h3>
+      <label>Título</label>
+      <input type="text" id="destaqueTitulo" placeholder="Ex.: Novo POP — Administração de Medicamentos">
+      <label>Link do documento (Firebase Storage, Drive, etc.)</label>
+      <input type="text" id="destaqueUrl" placeholder="https://...">
+      <button onclick="salvarDestaque()">Publicar destaque</button>
+      <p id="msgDestaque" class="admin-msg"></p>
+
+      <h3 style="margin-top:28px;">Documentos já publicados</h3>
+      <p style="color:var(--ink-soft);font-size:13.5px;">Ocultar tira da Home sem apagar — dá pra reativar quando quiser.</p>
+      <div id="listaDestaques">Carregando…</div>
+    </div>
+
+  </div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  const DIAS = [
+    { key: 'segunda', label: 'Segunda' }, { key: 'terca', label: 'Terça' },
+    { key: 'quarta', label: 'Quarta' }, { key: 'quinta', label: 'Quinta' },
+    { key: 'sexta', label: 'Sexta' }, { key: 'sabado', label: 'Sábado' },
+    { key: 'domingo', label: 'Domingo' },
+  ];
+
+  let usuario = null;
+
+  function sair() { logout().then(() => window.location.href = 'index.html'); }
+
+  function montarFormularioCardapio() {
+    const el = document.getElementById('diasCardapio');
+    el.innerHTML = DIAS.map(d => `
+      <div class="dia-row">
+        <span>${d.label}</span>
+        <div>
+          <textarea id="almoco-${d.key}" rows="3" placeholder="Um item por linha&#10;Ex.: Arroz branco&#10;Feijão carioca&#10;Frango grelhado"></textarea>
+          <input type="text" id="sobremesa-${d.key}" placeholder="Sobremesa (opcional)" style="margin-top:6px;">
+        </div>
+      </div>
+    `).join('');
+    carregarCardapioExistente();
+  }
+
+  async function carregarCardapioExistente() {
+    const msg = document.getElementById('msgCardapio');
+    try {
+      const doc = await db.collection('cardapio').doc('atual').get();
+      if (!doc.exists) return; // nada salvo ainda — formulário fica em branco mesmo
+      const dias = doc.data().dias || {};
+      DIAS.forEach(d => {
+        const dado = dias[d.key];
+        if (!dado) return;
+        document.getElementById(`almoco-${d.key}`).value = (dado.almoco || []).join('\n');
+        document.getElementById(`sobremesa-${d.key}`).value = dado.sobremesa || '';
+      });
+    } catch (e) {
+      console.error('Erro ao carregar cardápio existente:', e);
+      msg.textContent = 'Não foi possível carregar o cardápio atual para edição — ' +
+        'se você salvar agora, pode sobrescrever dias que não aparecem aqui. Recarregue a página antes de salvar.';
+      msg.className = 'admin-msg err';
+    }
+  }
+
+  async function salvarCardapio() {
+    const msg = document.getElementById('msgCardapio');
+    const dias = {};
+    DIAS.forEach(d => {
+      const almoco = document.getElementById(`almoco-${d.key}`).value
+        .split('\n').map(s => s.trim()).filter(Boolean);
+      const sobremesa = document.getElementById(`sobremesa-${d.key}`).value.trim();
+      dias[d.key] = { almoco, sobremesa };
+    });
+    try {
+      await db.collection('cardapio').doc('atual').set({
+        dias,
+        semanaInicio: firebase.firestore.FieldValue.serverTimestamp(),
+        atualizadoPor: usuario.nome || usuario.email,
+      });
+      msg.textContent = 'Cardápio salvo com sucesso!';
+      msg.className = 'admin-msg ok';
+    } catch (e) {
+      msg.textContent = 'Erro ao salvar: ' + e.message;
+      msg.className = 'admin-msg err';
+    }
+  }
+
+  async function salvarDestaque() {
+    const msg = document.getElementById('msgDestaque');
+    const titulo = document.getElementById('destaqueTitulo').value.trim();
+    const arquivoUrl = document.getElementById('destaqueUrl').value.trim();
+    if (!titulo) { msg.textContent = 'Preencha o título.'; msg.className = 'admin-msg err'; return; }
+    try {
+      await db.collection('destaque').add({
+        titulo, arquivoUrl, ativo: true,
+        atualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+        atualizadoPor: usuario.nome || usuario.email,
+      });
+      msg.textContent = 'Destaque publicado com sucesso!';
+      msg.className = 'admin-msg ok';
+      document.getElementById('destaqueTitulo').value = '';
+      document.getElementById('destaqueUrl').value = '';
+      carregarListaDestaques();
+    } catch (e) {
+      msg.textContent = 'Erro ao salvar: ' + e.message;
+      msg.className = 'admin-msg err';
+    }
+  }
+
+  async function carregarListaDestaques() {
+    const el = document.getElementById('listaDestaques');
+    try {
+      const snap = await db.collection('destaque').orderBy('atualizadoEm', 'desc').get();
+      if (snap.empty) { el.innerHTML = '<p class="doc-meta">Nenhum documento publicado ainda.</p>'; return; }
+      el.innerHTML = snap.docs.map(doc => {
+        const d = doc.data();
+        const ativo = d.ativo !== false;
+        const data = d.atualizadoEm?.toDate ? d.atualizadoEm.toDate().toLocaleDateString('pt-BR') : '';
+        return `
+          <div class="destaque-admin-row">
+            <div>
+              <p class="doc-title" style="margin:0;">${d.titulo || ''}</p>
+              <p class="doc-meta" style="margin:0;">${data} · ${ativo ? 'Visível na Home' : 'Oculto'}</p>
+            </div>
+            <button class="btn-toggle ${ativo ? 'ocultar' : 'reativar'}" onclick="alternarDestaque('${doc.id}', ${ativo})">
+              ${ativo ? 'Ocultar' : 'Reativar'}
+            </button>
+          </div>
+        `;
+      }).join('');
+    } catch (e) {
+      console.error('Erro ao listar destaques:', e);
+      el.innerHTML = `<p class="doc-meta">Não foi possível carregar a lista (${e.code || e.message}).</p>`;
+    }
+  }
+
+  async function alternarDestaque(id, estavaAtivo) {
+    try {
+      await db.collection('destaque').doc(id).update({ ativo: !estavaAtivo });
+      carregarListaDestaques();
+    } catch (e) {
+      alert('Erro ao atualizar: ' + e.message);
+    }
+  }
+
+  (async () => {
+    usuario = await getUsuarioAtual();
+    if (!usuario) { window.location.href = 'login.html'; return; }
+
+    document.getElementById('usuarioInfo').textContent =
+      `${usuario.nome || usuario.email} · ${usuario.papel || 'sem papel'}`;
+
+    let algumaSecao = false;
+
+    if (podeEditar('cardapio', usuario.papel)) {
+      document.getElementById('secaoCardapio').style.display = 'block';
+      montarFormularioCardapio();
+      algumaSecao = true;
+    }
+    if (podeEditar('destaque', usuario.papel)) {
+      document.getElementById('secaoDestaque').style.display = 'block';
+      carregarListaDestaques();
+      algumaSecao = true;
+    }
+    if (!algumaSecao) {
+      document.getElementById('semPermissao').style.display = 'block';
+    }
+  })();
+</script>
+</body>
+</html>

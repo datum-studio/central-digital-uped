@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrar — Central Digital UPED</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="auth-box">
+    <h2>Central Digital UPED</h2>
+    <p id="erro" class="auth-error"></p>
+    <label>E-mail</label>
+    <input type="email" id="email" placeholder="seu.email@uped.org.br">
+    <label>Senha</label>
+    <input type="password" id="senha" placeholder="••••••••">
+    <button onclick="entrar()">Entrar</button>
+    <p style="text-align:center;margin-top:16px;"><a href="index.html" style="color:var(--ink-soft);font-size:13px;">← Voltar para o portal</a></p>
+  </div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  async function entrar() {
+    const email = document.getElementById('email').value.trim();
+    const senha = document.getElementById('senha').value;
+    const erro = document.getElementById('erro');
+    erro.textContent = '';
+    try {
+      await login(email, senha);
+      window.location.href = 'admin.html';
+    } catch (e) {
+      erro.textContent = 'E-mail ou senha inválidos. Confira e tente novamente.';
+      console.error(e);
+    }
+  }
+  document.getElementById('senha').addEventListener('keydown', e => { if (e.key === 'Enter') entrar(); });
+</script>
+</body>
+</html>

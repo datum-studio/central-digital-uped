@@ -1,0 +1,49 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() {
+      return request.auth != null;
+    }
+
+    function papel() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.papel;
+    }
+
+    function temPapel(papeis) {
+      return logado() && papel() in papeis;
+    }
+
+    // Cada funcionário só lê o próprio documento de usuário (nome/papel).
+    // A criação/edição de usuários é feita manualmente pelo admin no Console.
+    match /usuarios/{uid} {
+      allow read: if logado() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Cardápio da semana — leitura pública (a Home não exige login), escrita só Nutrição/admin.
+    match /cardapio/{semanaId} {
+      allow read: if true;
+      allow write: if temPapel(["admin", "nutricao"]);
+    }
+
+    // Documento em destaque — leitura pública, escrita Direção/NEP/admin.
+    match /destaque/{docId} {
+      allow read: if true;
+      allow write: if temPapel(["admin", "direcao", "educacao_permanente"]);
+    }
+
+    // Comunicados — leitura pública, escrita Direção/admin.
+    match /comunicados/{id} {
+      allow read: if true;
+      allow write: if temPapel(["admin", "direcao"]);
+    }
+
+    // Aniversariantes — leitura pública, escrita RH/admin.
+    match /aniversariantes/{id} {
+      allow read: if true;
+      allow write: if temPapel(["admin", "rh"]);
+    }
+  }
+}

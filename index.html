@@ -133,6 +133,17 @@
 
 </div>
 
+<div id="modalCardapio" class="modal-overlay" style="display:none;" onclick="fecharModalSeBackdrop(event)">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Cardápio Completo da Semana</h3>
+      <button class="modal-close" onclick="fecharCardapioCompleto()">✕</button>
+    </div>
+    <div class="dia-tabs" id="diaTabs"></div>
+    <div id="diaTabConteudo"></div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
@@ -198,26 +209,16 @@
 
   // ---- Cardápio da semana ----
   const nomesDia = { segunda: 'Segunda', terca: 'Terça', quarta: 'Quarta', quinta: 'Quinta', sexta: 'Sexta', sabado: 'Sábado', domingo: 'Domingo' };
+  let cardapioSemanaAtual = null;
+  let diaSemanaKeyAtual = null;
+
   db.collection('cardapio').orderBy('semanaInicio', 'desc').limit(1).get().then(snap => {
     const el = document.getElementById('cardapioConteudo');
     if (snap.empty) { el.innerHTML = '<p class="doc-meta">Cardápio ainda não publicado.</p>'; return; }
     const d = snap.docs[0].data();
-    const diaSemanaKey = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'][hoje.getDay()];
-    const diaHoje = d.dias?.[diaSemanaKey];
-
-    const semanaCompleta = Object.entries(nomesDia).map(([key, label]) => {
-      const dia = d.dias?.[key];
-      if (!dia || (!dia.almoco?.length && !dia.sobremesa)) return '';
-      return `
-        <div class="semana-dia ${key === diaSemanaKey ? 'semana-dia-hoje' : ''}">
-          <b>${label}</b>
-          <ul class="menu-list">
-            ${(dia.almoco || []).map(item => `<li>${item}</li>`).join('')}
-            ${dia.sobremesa ? `<li><b>Sobremesa:</b> ${dia.sobremesa}</li>` : ''}
-          </ul>
-        </div>
-      `;
-    }).join('');
+    cardapioSemanaAtual = d;
+    diaSemanaKeyAtual = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'][hoje.getDay()];
+    const diaHoje = d.dias?.[diaSemanaKeyAtual];
 
     if (!diaHoje) { el.innerHTML = '<p class="doc-meta">Sem cardápio cadastrado para hoje.</p>'; return; }
     el.innerHTML = `
@@ -225,20 +226,49 @@
         ${(diaHoje.almoco || []).map(item => `<li>${item}</li>`).join('')}
         ${diaHoje.sobremesa ? `<li><b>Sobremesa:</b> ${diaHoje.sobremesa}</li>` : ''}
       </ul>
-      <button class="btn-block" onclick="alternarCardapioCompleto()" id="btnCardapioCompleto">Ver cardápio completo</button>
-      <div class="semana-completa" id="semanaCompletaWrap" style="display:none;">${semanaCompleta}</div>
+      <button class="btn-block" onclick="abrirCardapioCompleto()">Ver cardápio completo</button>
     `;
   }).catch(e => {
     console.error('Erro ao carregar cardápio:', e);
     document.getElementById('cardapioConteudo').innerHTML = `<p class="doc-meta">Não foi possível carregar (${e.code || e.message}).</p>`;
   });
 
-  function alternarCardapioCompleto() {
-    const wrap = document.getElementById('semanaCompletaWrap');
-    const btn = document.getElementById('btnCardapioCompleto');
-    const aberto = wrap.style.display !== 'none';
-    wrap.style.display = aberto ? 'none' : 'block';
-    btn.textContent = aberto ? 'Ver cardápio completo' : 'Ver menos';
+  function abrirCardapioCompleto() {
+    if (!cardapioSemanaAtual) return;
+    const tabsEl = document.getElementById('diaTabs');
+    tabsEl.innerHTML = Object.entries(nomesDia).map(([key, label]) => {
+      const temDado = cardapioSemanaAtual.dias?.[key] && (cardapioSemanaAtual.dias[key].almoco?.length || cardapioSemanaAtual.dias[key].sobremesa);
+      if (!temDado) return '';
+      return `<button class="dia-tab" data-dia="${key}" onclick="mostrarDiaModal('${key}')">${label}</button>`;
+    }).join('');
+    mostrarDiaModal(diaSemanaKeyAtual);
+    document.getElementById('modalCardapio').style.display = 'flex';
+  }
+
+  function mostrarDiaModal(key) {
+    const dia = cardapioSemanaAtual.dias?.[key];
+    document.querySelectorAll('.dia-tab').forEach(btn => {
+      btn.classList.toggle('dia-tab-ativa', btn.dataset.dia === key);
+    });
+    const conteudo = document.getElementById('diaTabConteudo');
+    if (!dia || (!dia.almoco?.length && !dia.sobremesa)) {
+      conteudo.innerHTML = '<p class="doc-meta">Sem cardápio cadastrado para este dia.</p>';
+      return;
+    }
+    conteudo.innerHTML = `
+      <ul class="menu-list">
+        ${(dia.almoco || []).map(item => `<li>${item}</li>`).join('')}
+        ${dia.sobremesa ? `<li><b>Sobremesa:</b> ${dia.sobremesa}</li>` : ''}
+      </ul>
+    `;
+  }
+
+  function fecharCardapioCompleto() {
+    document.getElementById('modalCardapio').style.display = 'none';
+  }
+
+  function fecharModalSeBackdrop(evento) {
+    if (evento.target.id === 'modalCardapio') fecharCardapioCompleto();
   }
 
   // ---- Comunicados / Direção Comunica (só os ativos, mais recentes primeiro) ----

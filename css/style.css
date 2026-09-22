@@ -74,6 +74,15 @@ header{display:flex;justify-content:space-between;align-items:center;gap:20px;fl
 .menu-today{background:var(--coral);color:#fff;font-size:12px;font-weight:800;padding:6px 10px;border-radius:8px;width:fit-content;}
 .menu-list{font-size:13px;line-height:1.6;margin:0;padding-left:18px;color:var(--ink-soft);}
 
+.mes-banner{background:var(--navy);color:#fff;text-align:center;font-family:'Fredoka';font-weight:700;font-size:13px;letter-spacing:1px;padding:8px;border-radius:10px;margin-bottom:10px;}
+
+.semana-completa{margin-top:14px;border-top:1px dashed #eee;padding-top:10px;display:flex;flex-direction:column;gap:12px;}
+.semana-dia{padding-bottom:10px;border-bottom:1px dashed #f3f3f3;}
+.semana-dia:last-child{border-bottom:none;}
+.semana-dia b{font-family:'Fredoka';font-size:13px;color:var(--navy);}
+.semana-dia-hoje b{color:var(--coral);}
+.semana-dia .menu-list{margin-top:4px;}
+
 .news-item{font-size:13px;line-height:1.4;padding:6px 0;border-bottom:1px dashed #eee;}
 .news-item:last-child{border-bottom:none;}
 
@@ -100,12 +109,14 @@ footer{margin-top:40px;background:var(--navy);color:#fff;border-radius:16px;padd
 .dia-row{display:grid;grid-template-columns:90px 1fr;gap:10px;align-items:start;margin-bottom:8px;}
 .dia-row span{font-weight:700;font-size:13px;color:var(--navy);padding-top:8px;}
 
-.destaque-admin-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px dashed #eee;transition:opacity .15s ease;}
+.destaque-admin-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px dashed #eee;transition:opacity .15s ease;flex-wrap:wrap;}
 .destaque-admin-row:last-child{border-bottom:none;}
 .destaque-admin-row.linha-oculta{opacity:0.5;}
+.row-actions{display:flex;gap:8px;flex-wrap:wrap;}
 .btn-toggle{border:none;border-radius:8px;padding:7px 14px;font-family:'Fredoka';font-weight:600;font-size:12.5px;cursor:pointer;white-space:nowrap;}
 .btn-toggle.ocultar{background:#FDEAEA;color:var(--coral);}
 .btn-toggle.reativar{background:#E8F5E9;color:var(--card-green-b);}
+.btn-toggle.excluir{background:var(--coral);color:#fff;}
 .status-pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;}
 .status-pill.status-visivel{background:#E8F5E9;color:var(--card-green-b);}
 .status-pill.status-oculto{background:#FDEAEA;color:var(--coral);}

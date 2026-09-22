@@ -117,7 +117,7 @@
     </div>
 
     <div class="dyn-card news">
-      <div class="dyn-head"><span class="dot"></span>Direção Comunica</div>
+      <div class="dyn-head"><span class="dot"></span>UPED News</div>
       <div id="comunicadosConteudo">
         <p class="doc-meta">Carregando…</p>
       </div>
@@ -181,11 +181,13 @@
   });
 
   // ---- Aniversariantes do mês ----
+  const nomesMes = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
   const mesAtual = hoje.getMonth() + 1;
   db.collection('aniversariantes').where('mes', '==', mesAtual).orderBy('dia').get().then(snap => {
     const el = document.getElementById('aniversariantesConteudo');
-    if (snap.empty) { el.innerHTML = '<p class="doc-meta">Nenhum aniversariante este mês.</p>'; return; }
-    el.innerHTML = snap.docs.map(doc => {
+    const banner = `<div class="mes-banner">${nomesMes[mesAtual - 1]}</div>`;
+    if (snap.empty) { el.innerHTML = banner + '<p class="doc-meta">Nenhum aniversariante este mês.</p>'; return; }
+    el.innerHTML = banner + snap.docs.map(doc => {
       const d = doc.data();
       return `<div class="bday-item"><span>${d.nome}</span><b>${String(d.dia).padStart(2,'0')}/${String(mesAtual).padStart(2,'0')}</b></div>`;
     }).join('');
@@ -195,23 +197,49 @@
   });
 
   // ---- Cardápio da semana ----
+  const nomesDia = { segunda: 'Segunda', terca: 'Terça', quarta: 'Quarta', quinta: 'Quinta', sexta: 'Sexta', sabado: 'Sábado', domingo: 'Domingo' };
   db.collection('cardapio').orderBy('semanaInicio', 'desc').limit(1).get().then(snap => {
     const el = document.getElementById('cardapioConteudo');
     if (snap.empty) { el.innerHTML = '<p class="doc-meta">Cardápio ainda não publicado.</p>'; return; }
     const d = snap.docs[0].data();
     const diaSemanaKey = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'][hoje.getDay()];
     const diaHoje = d.dias?.[diaSemanaKey];
+
+    const semanaCompleta = Object.entries(nomesDia).map(([key, label]) => {
+      const dia = d.dias?.[key];
+      if (!dia || (!dia.almoco?.length && !dia.sobremesa)) return '';
+      return `
+        <div class="semana-dia ${key === diaSemanaKey ? 'semana-dia-hoje' : ''}">
+          <b>${label}</b>
+          <ul class="menu-list">
+            ${(dia.almoco || []).map(item => `<li>${item}</li>`).join('')}
+            ${dia.sobremesa ? `<li><b>Sobremesa:</b> ${dia.sobremesa}</li>` : ''}
+          </ul>
+        </div>
+      `;
+    }).join('');
+
     if (!diaHoje) { el.innerHTML = '<p class="doc-meta">Sem cardápio cadastrado para hoje.</p>'; return; }
     el.innerHTML = `
       <ul class="menu-list">
         ${(diaHoje.almoco || []).map(item => `<li>${item}</li>`).join('')}
         ${diaHoje.sobremesa ? `<li><b>Sobremesa:</b> ${diaHoje.sobremesa}</li>` : ''}
       </ul>
+      <button class="btn-block" onclick="alternarCardapioCompleto()" id="btnCardapioCompleto">Ver cardápio completo</button>
+      <div class="semana-completa" id="semanaCompletaWrap" style="display:none;">${semanaCompleta}</div>
     `;
   }).catch(e => {
     console.error('Erro ao carregar cardápio:', e);
     document.getElementById('cardapioConteudo').innerHTML = `<p class="doc-meta">Não foi possível carregar (${e.code || e.message}).</p>`;
   });
+
+  function alternarCardapioCompleto() {
+    const wrap = document.getElementById('semanaCompletaWrap');
+    const btn = document.getElementById('btnCardapioCompleto');
+    const aberto = wrap.style.display !== 'none';
+    wrap.style.display = aberto ? 'none' : 'block';
+    btn.textContent = aberto ? 'Ver cardápio completo' : 'Ver menos';
+  }
 
   // ---- Comunicados / Direção Comunica (só os ativos, mais recentes primeiro) ----
   db.collection('comunicados').orderBy('data', 'desc').get().then(snap => {

@@ -61,7 +61,7 @@
     <!-- ÁREA: Comunicados -->
     <div id="areaComunicados" class="admin-section area-detalhe" style="display:none;">
       <a href="#" class="voltar-menu" onclick="mostrarMenu(); return false;">← Voltar ao painel</a>
-      <h3>📢 Direção Comunica</h3>
+      <h3>📢 UPED News (Comunicados)</h3>
       <label>Título</label>
       <input type="text" id="comunicadoTitulo" placeholder="Ex.: Reunião geral na sexta">
       <label>Texto do comunicado</label>
@@ -93,7 +93,7 @@
   const AREAS = [
     { area: 'cardapio', icone: '🍽️', titulo: 'Cardápio de Hoje', elId: 'areaCardapio', onAbrir: () => montarFormularioCardapio() },
     { area: 'destaque', icone: '📌', titulo: 'Documento em Destaque', elId: 'areaDestaque', onAbrir: () => carregarListaDestaques() },
-    { area: 'comunicados', icone: '📢', titulo: 'Direção Comunica', elId: 'areaComunicados', onAbrir: () => carregarListaComunicados() },
+    { area: 'comunicados', icone: '📢', titulo: 'UPED News (Comunicados)', elId: 'areaComunicados', onAbrir: () => carregarListaComunicados() },
   ];
 
   let usuario = null;
@@ -224,9 +224,14 @@
                 ${data} · <span class="status-pill ${ativo ? 'status-visivel' : 'status-oculto'}">${ativo ? 'Visível na Home' : 'Oculto'}</span>
               </p>
             </div>
+            <div class="row-actions">
             <button class="btn-toggle ${ativo ? 'ocultar' : 'reativar'}" onclick="alternarAtivo('destaque', '${doc.id}', ${ativo}, carregarListaDestaques)">
               ${ativo ? 'Ocultar' : 'Reativar'}
             </button>
+            <button class="btn-toggle excluir" onclick="excluirItem('destaque', '${doc.id}', ${JSON.stringify(d.titulo || '')}, carregarListaDestaques)">
+              Excluir
+            </button>
+            </div>
           </div>
         `;
       }).join('');
@@ -276,9 +281,14 @@
                 ${data} · <span class="status-pill ${ativo ? 'status-visivel' : 'status-oculto'}">${ativo ? 'Visível na Home' : 'Oculto'}</span>
               </p>
             </div>
+            <div class="row-actions">
             <button class="btn-toggle ${ativo ? 'ocultar' : 'reativar'}" onclick="alternarAtivo('comunicados', '${doc.id}', ${ativo}, carregarListaComunicados)">
               ${ativo ? 'Ocultar' : 'Reativar'}
             </button>
+            <button class="btn-toggle excluir" onclick="excluirItem('comunicados', '${doc.id}', ${JSON.stringify(d.titulo || '')}, carregarListaComunicados)">
+              Excluir
+            </button>
+            </div>
           </div>
         `;
       }).join('');
@@ -295,6 +305,18 @@
       recarregar();
     } catch (e) {
       alert('Erro ao atualizar: ' + e.message);
+    }
+  }
+
+  // ---- Excluir de vez (sem volta — diferente de ocultar) ----
+  async function excluirItem(colecao, id, titulo, recarregar) {
+    const confirmado = confirm(`Excluir "${titulo}" para sempre? Essa ação não pode ser desfeita — se for só pra tirar da Home, use "Ocultar" em vez disso.`);
+    if (!confirmado) return;
+    try {
+      await db.collection(colecao).doc(id).delete();
+      recarregar();
+    } catch (e) {
+      alert('Erro ao excluir: ' + e.message);
     }
   }
 

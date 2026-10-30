@@ -178,3 +178,45 @@ footer{margin-top:40px;background:var(--navy);color:#fff;border-radius:16px;padd
 .edu-historico{margin-top:22px;}
 .edu-historico summary{cursor:pointer;font-family:'Fredoka';font-weight:600;color:var(--navy);margin:0 4px 12px;}
 @media(max-width:520px){.edu-item{flex-direction:column;}.edu-data{flex:none;display:flex;gap:6px;align-items:baseline;justify-content:center;padding:6px 14px;}.edu-data b{display:inline;font-size:18px;}}
+
+/* ---- Qualidade e Segurança ---- */
+.alerta-lista{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;}
+.alerta-card{background:#fff;border-radius:16px;padding:16px 18px;box-shadow:0 4px 16px rgba(27,42,92,.06);border-left:6px solid var(--card-blue-b);}
+.alerta-card.alerta-atencao{border-left-color:var(--card-amber-b);}
+.alerta-card.alerta-urgente{border-left-color:var(--coral);}
+.alerta-nivel{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--card-blue-b);}
+.alerta-atencao .alerta-nivel{color:var(--card-amber-b);}
+.alerta-urgente .alerta-nivel{color:var(--coral);}
+.alerta-corpo{margin:0;font-size:14px;line-height:1.5;color:var(--ink-soft);white-space:pre-wrap;}
+
+.ind-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;}
+.ind-card{background:#fff;border-radius:16px;padding:16px 18px;box-shadow:0 4px 16px rgba(27,42,92,.06);display:flex;flex-direction:column;gap:4px;}
+.ind-nome{font-family:'Fredoka';font-weight:600;font-size:14.5px;margin:0;color:var(--navy);}
+.ind-valor{font-family:'Fredoka';font-weight:700;font-size:34px;line-height:1.1;margin:4px 0 2px;color:var(--teal);}
+.ind-valor small{font-size:16px;font-weight:600;color:var(--ink-soft);}
+.ind-card .status-pill{width:fit-content;margin-top:4px;}
+.ind-var{font-size:12px;font-weight:800;}
+.ind-sobe{color:var(--card-green-b);}
+.ind-cai{color:var(--coral);}
+.ind-neutro{color:var(--ink-soft);}
+
+.notif-form{background:#fff;border-radius:18px;padding:22px;box-shadow:0 4px 16px rgba(27,42,92,.06);max-width:760px;}
+.notif-form label{display:block;font-weight:700;font-size:13px;margin:16px 0 6px;color:var(--navy);}
+.notif-form input[type=text],.notif-form input[type=date],.notif-form select,.notif-form textarea{width:100%;padding:11px;border-radius:10px;border:1px solid #ddd;font-family:'Nunito';font-size:14px;background:#fff;}
+.notif-form textarea{resize:vertical;}
+.notif-intro{font-size:14px;line-height:1.55;color:var(--ink-soft);margin:0;}
+.notif-honey{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;}
+.btn-enviar{margin-top:20px;border:none;border-radius:12px;padding:13px 26px;font-family:'Fredoka';font-weight:600;font-size:15px;color:#fff;background:var(--navy);cursor:pointer;}
+.btn-enviar:disabled{opacity:.6;cursor:default;}
+.notif-ok{text-align:center;padding:10px;}
+
+.notif-card{background:#F8F9FC;border:1px solid #e6e9f2;border-radius:12px;padding:12px 14px;margin-bottom:10px;}
+.notif-card summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.notif-card.notif-nova{border-left:5px solid var(--coral);}
+.notif-card.notif-analise{border-left:5px solid var(--card-amber-b);}
+.notif-card.notif-concluida{border-left:5px solid var(--card-green-b);}
+.notif-tipo{font-family:'Fredoka';font-weight:600;color:var(--navy);}
+.notif-desc{white-space:pre-wrap;font-size:14px;line-height:1.5;background:#fff;border-radius:10px;padding:10px 12px;margin:10px 0;}
+.status-pill.notif-pill-nova{background:#FDEAEA;color:var(--coral);}
+.status-pill.notif-pill-analise{background:var(--card-amber);color:var(--card-amber-b);}
+.status-pill.notif-pill-concluida{background:#E8F5E9;color:var(--card-green-b);}

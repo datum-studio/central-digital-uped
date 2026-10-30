@@ -43,6 +43,7 @@ const PERMISSOES = {
   destaque: ["admin", "direcao", "educacao_permanente"],
   comunicados: ["admin", "direcao"],
   aniversariantes: ["admin", "rh"],
+  pops: ["admin", "educacao_permanente"],
 };
 
 function podeEditar(area, papel) {

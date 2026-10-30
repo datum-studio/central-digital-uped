@@ -225,6 +225,95 @@
       <div id="listaEdu" style="margin-top:10px;">Carregando…</div>
     </div>
 
+
+    <!-- ÁREA: Alertas de Segurança -->
+    <div id="areaAlertas" class="admin-section area-detalhe" style="display:none;">
+      <a href="#" class="voltar-menu" onclick="mostrarMenu(); return false;">← Voltar ao painel</a>
+      <h3 id="alertaFormTitulo">🛡️ Alertas de Segurança</h3>
+      <p style="color:var(--ink-soft);font-size:13.5px;">Avisos curtos que aparecem no topo da página Qualidade e Segurança.</p>
+      <label>Título</label>
+      <input type="text" id="alertaTitulo" placeholder="Ex.: Reforço na higienização das mãos">
+      <label>Texto do alerta</label>
+      <textarea id="alertaCorpo" rows="3" placeholder="Em poucas linhas, o que a equipe precisa fazer"></textarea>
+      <label>Nível</label>
+      <select id="alertaNivel">
+        <option value="informativo">Informativo</option>
+        <option value="atencao">Atenção</option>
+        <option value="urgente">Urgente</option>
+      </select>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button id="btnSalvarAlerta" onclick="salvarAlerta()">Publicar alerta</button>
+        <button id="btnCancelarAlerta" onclick="limparFormAlerta()" style="display:none;background:#8a93a8;">Cancelar edição</button>
+      </div>
+      <p id="msgAlerta" class="admin-msg"></p>
+      <h3 style="margin-top:28px;">Alertas publicados</h3>
+      <div id="listaAlertas" style="margin-top:10px;">Carregando…</div>
+    </div>
+
+    <!-- ÁREA: Indicadores de Qualidade -->
+    <div id="areaInd" class="admin-section area-detalhe" style="display:none;">
+      <a href="#" class="voltar-menu" onclick="mostrarMenu(); return false;">← Voltar ao painel</a>
+      <h3 id="indFormTitulo">📈 Indicadores de Qualidade</h3>
+      <p style="color:var(--ink-soft);font-size:13.5px;">Um lançamento por indicador e por mês. A página pública mostra sempre o mês mais recente de cada indicador.</p>
+      <label>Indicador</label>
+      <input type="text" id="indNome" list="indNomes" placeholder="Escolha ou digite o nome do indicador">
+      <datalist id="indNomes">
+        <option value="Adesão à higienização das mãos"></option>
+        <option value="Taxa de infecção relacionada à assistência"></option>
+        <option value="Quedas de pacientes"></option>
+        <option value="Erros de medicação notificados"></option>
+        <option value="Lesão por pressão"></option>
+        <option value="Identificação correta do paciente"></option>
+      </datalist>
+      <div class="aniv-data-row" style="grid-template-columns:1fr 1fr 1fr;">
+        <div><label>Mês de referência</label><input type="month" id="indMes"></div>
+        <div><label>Valor</label><input type="number" id="indValor" step="0.01" placeholder="Ex.: 87,5 → 87.5"></div>
+        <div><label>Meta (opcional)</label><input type="number" id="indMeta" step="0.01" placeholder="Ex.: 90"></div>
+      </div>
+      <div class="aniv-data-row" style="grid-template-columns:1fr 1fr;">
+        <div>
+          <label>Unidade</label>
+          <select id="indUnidade">
+            <option value="%">% (percentual)</option>
+            <option value="casos">casos</option>
+            <option value="por mil">por mil</option>
+            <option value="dias">dias</option>
+            <option value="">sem unidade</option>
+          </select>
+        </div>
+        <div>
+          <label>O melhor resultado é</label>
+          <select id="indSentido">
+            <option value="maior">o maior possível (ex.: adesão)</option>
+            <option value="menor">o menor possível (ex.: quedas)</option>
+          </select>
+        </div>
+      </div>
+      <label>Observação (opcional)</label>
+      <input type="text" id="indObs" placeholder="Ex.: dado parcial, coleta em 3 setores">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button id="btnSalvarInd" onclick="salvarInd()">Lançar indicador</button>
+        <button id="btnCancelarInd" onclick="limparFormInd()" style="display:none;background:#8a93a8;">Cancelar edição</button>
+      </div>
+      <p id="msgInd" class="admin-msg"></p>
+      <h3 style="margin-top:28px;">Lançamentos</h3>
+      <div id="listaInd" style="margin-top:10px;">Carregando…</div>
+    </div>
+
+    <!-- ÁREA: Notificações recebidas -->
+    <div id="areaNotif" class="admin-section area-detalhe" style="display:none;">
+      <a href="#" class="voltar-menu" onclick="mostrarMenu(); return false;">← Voltar ao painel</a>
+      <h3>📨 Notificações Recebidas</h3>
+      <p style="color:var(--ink-soft);font-size:13.5px;">Enviadas pela equipe na página Qualidade e Segurança. Só quem tem papel Qualidade, Direção ou admin consegue ver este conteúdo.</p>
+      <select id="notifFiltro" onchange="renderizarListaNotif()">
+        <option value="">Todas</option>
+        <option value="nova">Novas</option>
+        <option value="analise">Em análise</option>
+        <option value="concluida">Concluídas</option>
+      </select>
+      <div id="listaNotif" style="margin-top:12px;">Carregando…</div>
+    </div>
+
   </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -249,6 +338,9 @@
     { area: 'documentos', icone: '🗂️', titulo: 'Documentos Institucionais', elId: 'areaDocs', onAbrir: () => carregarListaDocs() },
     { area: 'aniversariantes', icone: '🎂', titulo: 'Aniversariantes', elId: 'areaAniv', onAbrir: () => carregarListaAniv() },
     { area: 'educacao', icone: '🎓', titulo: 'Educação Permanente', elId: 'areaEdu', onAbrir: () => carregarListaEdu() },
+    { area: 'qualidade', id: 'alertas', icone: '🛡️', titulo: 'Alertas de Segurança', elId: 'areaAlertas', onAbrir: () => carregarListaAlertas() },
+    { area: 'qualidade', id: 'indicadores', icone: '📈', titulo: 'Indicadores de Qualidade', elId: 'areaInd', onAbrir: () => carregarListaInd() },
+    { area: 'notificacoes', icone: '📨', titulo: 'Notificações Recebidas', elId: 'areaNotif', onAbrir: () => carregarListaNotif() },
   ];
 
   let usuario = null;
@@ -264,7 +356,7 @@
 
   function abrirArea(area) {
     document.getElementById('menuSecoes').style.display = 'none';
-    const def = AREAS.find(a => a.area === area);
+    const def = AREAS.find(a => (a.id || a.area) === area);
     document.getElementById(def.elId).style.display = 'block';
     def.onAbrir();
   }
@@ -272,7 +364,7 @@
   function montarMenu() {
     const el = document.getElementById('menuSecoes');
     el.innerHTML = areasLiberadas.map(def => `
-      <button class="menu-card" onclick="abrirArea('${def.area}')">
+      <button class="menu-card" onclick="abrirArea('${def.id || def.area}')">
         <span class="menu-card-icone">${def.icone}</span>
         <span class="menu-card-titulo">${def.titulo}</span>
         <span class="menu-card-seta">→</span>
@@ -1010,6 +1102,304 @@
     }).join('');
   }
   atualizarCamposEdu();
+
+  // ---- Alertas de Segurança ----
+  const NIVEIS = { informativo: 'Informativo', atencao: 'Atenção', urgente: 'Urgente' };
+  let alertasCache = {};
+  let alertaEditandoId = null;
+
+  function limparFormAlerta() {
+    ['alertaTitulo','alertaCorpo'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('alertaNivel').value = 'informativo';
+    alertaEditandoId = null;
+    document.getElementById('btnSalvarAlerta').textContent = 'Publicar alerta';
+    document.getElementById('btnCancelarAlerta').style.display = 'none';
+    document.getElementById('alertaFormTitulo').textContent = '🛡️ Alertas de Segurança';
+  }
+
+  async function salvarAlerta() {
+    const msg = document.getElementById('msgAlerta');
+    const titulo = document.getElementById('alertaTitulo').value.trim();
+    const corpo = document.getElementById('alertaCorpo').value.trim();
+    const nivel = document.getElementById('alertaNivel').value;
+    if (!titulo) { msg.textContent = 'Preencha o título.'; msg.className = 'admin-msg err'; return; }
+    if (!corpo) { msg.textContent = 'Escreva o texto do alerta.'; msg.className = 'admin-msg err'; return; }
+    const dados = {
+      titulo, corpo, nivel,
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoPor: usuario.nome || usuario.email,
+    };
+    try {
+      if (alertaEditandoId) {
+        await db.collection('alertas').doc(alertaEditandoId).update(dados);
+        msg.textContent = 'Alerta atualizado!';
+      } else {
+        await db.collection('alertas').add({ ...dados, ativo: true });
+        msg.textContent = 'Alerta publicado!';
+      }
+      msg.className = 'admin-msg ok';
+      limparFormAlerta();
+      carregarListaAlertas();
+    } catch (e) {
+      msg.textContent = 'Erro ao salvar: ' + e.message;
+      msg.className = 'admin-msg err';
+    }
+  }
+
+  function editarAlerta(id) {
+    const a = alertasCache[id];
+    if (!a) return;
+    alertaEditandoId = id;
+    document.getElementById('alertaTitulo').value = a.titulo || '';
+    document.getElementById('alertaCorpo').value = a.corpo || '';
+    document.getElementById('alertaNivel').value = a.nivel || 'informativo';
+    document.getElementById('btnSalvarAlerta').textContent = 'Salvar alterações';
+    document.getElementById('btnCancelarAlerta').style.display = 'inline-block';
+    document.getElementById('alertaFormTitulo').textContent = '✏️ Editando alerta';
+    document.getElementById('msgAlerta').textContent = '';
+    document.getElementById('areaAlertas').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function excluirAlerta(id) {
+    excluirItem('alertas', id, alertasCache[id]?.titulo || '', () => {
+      if (alertaEditandoId === id) limparFormAlerta();
+      carregarListaAlertas();
+    });
+  }
+
+  async function carregarListaAlertas() {
+    const el = document.getElementById('listaAlertas');
+    try {
+      const snap = await db.collection('alertas').get();
+      alertasCache = {};
+      const itens = snap.docs.map(doc => {
+        const d = doc.data();
+        alertasCache[doc.id] = d;
+        return { id: doc.id, ...d };
+      }).sort((a, b) => (b.atualizadoEm?.seconds || 0) - (a.atualizadoEm?.seconds || 0));
+      if (itens.length === 0) { el.innerHTML = '<p class="doc-meta">Nenhum alerta publicado ainda.</p>'; return; }
+      el.innerHTML = itens.map(d => {
+        const ativo = d.ativo !== false;
+        const data = d.atualizadoEm?.toDate ? d.atualizadoEm.toDate().toLocaleDateString('pt-BR') : '';
+        return `
+          <div class="destaque-admin-row ${ativo ? '' : 'linha-oculta'}">
+            <div>
+              <p class="doc-title" style="margin:0;">${esc(d.titulo)}</p>
+              <p class="doc-meta" style="margin:0;">
+                ${esc(NIVEIS[d.nivel] || 'Informativo')} · ${data} ·
+                <span class="status-pill ${ativo ? 'status-visivel' : 'status-oculto'}">${ativo ? 'Visível' : 'Oculto'}</span>
+              </p>
+            </div>
+            <div class="row-actions">
+              <button class="btn-toggle editar" onclick="editarAlerta('${esc(d.id)}')">Editar</button>
+              <button class="btn-toggle ${ativo ? 'ocultar' : 'reativar'}" onclick="alternarAtivo('alertas', '${esc(d.id)}', ${ativo}, carregarListaAlertas)">${ativo ? 'Ocultar' : 'Reativar'}</button>
+              <button class="btn-toggle excluir" onclick="excluirAlerta('${esc(d.id)}')">Excluir</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (e) {
+      console.error('Erro ao listar alertas:', e);
+      el.innerHTML = `<p class="doc-meta">Não foi possível carregar a lista (${esc(e.code || e.message)}).</p>`;
+    }
+  }
+
+  // ---- Indicadores de Qualidade ----
+  let indCache = {};
+  let indEditandoId = null;
+
+  function mesBr(mes) {
+    const m = /^(\d{4})-(\d{2})$/.exec(mes || '');
+    return m ? `${m[2]}/${m[1]}` : '';
+  }
+
+  function limparFormInd() {
+    ['indNome','indMes','indValor','indMeta','indObs'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('indUnidade').value = '%';
+    document.getElementById('indSentido').value = 'maior';
+    indEditandoId = null;
+    document.getElementById('btnSalvarInd').textContent = 'Lançar indicador';
+    document.getElementById('btnCancelarInd').style.display = 'none';
+    document.getElementById('indFormTitulo').textContent = '📈 Indicadores de Qualidade';
+  }
+
+  async function salvarInd() {
+    const msg = document.getElementById('msgInd');
+    const erro = t => { msg.textContent = t; msg.className = 'admin-msg err'; };
+    const nome = document.getElementById('indNome').value.trim();
+    const mes = document.getElementById('indMes').value.trim();
+    const valorTxt = document.getElementById('indValor').value.trim().replace(',', '.');
+    const metaTxt = document.getElementById('indMeta').value.trim().replace(',', '.');
+    if (!nome) return erro('Preencha o nome do indicador.');
+    if (!/^\d{4}-\d{2}$/.test(mes)) return erro('Escolha o mês de referência.');
+    const valor = Number(valorTxt);
+    if (valorTxt === '' || !isFinite(valor)) return erro('Informe o valor do indicador.');
+    const meta = metaTxt === '' ? null : Number(metaTxt);
+    if (meta !== null && !isFinite(meta)) return erro('A meta precisa ser um número.');
+    // Evita dois lançamentos do mesmo indicador no mesmo mês
+    const repetido = Object.entries(indCache).some(([id, d]) =>
+      id !== indEditandoId && normalizarTxt(d.nome) === normalizarTxt(nome) && d.mes === mes);
+    if (repetido) return erro('Esse indicador já tem lançamento nesse mês. Edite o lançamento existente.');
+    const dados = {
+      nome, mes, valor, meta,
+      unidade: document.getElementById('indUnidade').value,
+      sentido: document.getElementById('indSentido').value,
+      observacao: document.getElementById('indObs').value.trim(),
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoPor: usuario.nome || usuario.email,
+    };
+    try {
+      if (indEditandoId) {
+        await db.collection('indicadores').doc(indEditandoId).update(dados);
+        msg.textContent = 'Lançamento atualizado!';
+      } else {
+        await db.collection('indicadores').add({ ...dados, ativo: true });
+        msg.textContent = 'Indicador lançado!';
+      }
+      msg.className = 'admin-msg ok';
+      limparFormInd();
+      carregarListaInd();
+    } catch (e) {
+      msg.textContent = 'Erro ao salvar: ' + e.message;
+      msg.className = 'admin-msg err';
+    }
+  }
+
+  function editarInd(id) {
+    const d = indCache[id];
+    if (!d) return;
+    indEditandoId = id;
+    document.getElementById('indNome').value = d.nome || '';
+    document.getElementById('indMes').value = d.mes || '';
+    document.getElementById('indValor').value = (d.valor ?? '');
+    document.getElementById('indMeta').value = (d.meta ?? '');
+    document.getElementById('indUnidade').value = d.unidade ?? '%';
+    document.getElementById('indSentido').value = d.sentido || 'maior';
+    document.getElementById('indObs').value = d.observacao || '';
+    document.getElementById('btnSalvarInd').textContent = 'Salvar alterações';
+    document.getElementById('btnCancelarInd').style.display = 'inline-block';
+    document.getElementById('indFormTitulo').textContent = '✏️ Editando lançamento';
+    document.getElementById('msgInd').textContent = '';
+    document.getElementById('areaInd').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function excluirInd(id) {
+    const d = indCache[id];
+    excluirItem('indicadores', id, d ? `${d.nome} (${mesBr(d.mes)})` : '', () => {
+      if (indEditandoId === id) limparFormInd();
+      carregarListaInd();
+    });
+  }
+
+  async function carregarListaInd() {
+    const el = document.getElementById('listaInd');
+    try {
+      const snap = await db.collection('indicadores').get();
+      indCache = {};
+      const itens = snap.docs.map(doc => {
+        const d = doc.data();
+        indCache[doc.id] = d;
+        return { id: doc.id, ...d };
+      }).sort((a, b) => (b.mes || '').localeCompare(a.mes || '') || (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
+      if (itens.length === 0) { el.innerHTML = '<p class="doc-meta">Nenhum indicador lançado ainda.</p>'; return; }
+      el.innerHTML = itens.map(d => {
+        const ativo = d.ativo !== false;
+        const unidade = d.unidade ? (d.unidade === '%' ? '%' : ' ' + d.unidade) : '';
+        return `
+          <div class="destaque-admin-row ${ativo ? '' : 'linha-oculta'}">
+            <div>
+              <p class="doc-title" style="margin:0;">${esc(d.nome)}</p>
+              <p class="doc-meta" style="margin:0;">
+                ${mesBr(d.mes)} · ${esc(String(d.valor))}${esc(unidade)}${d.meta !== null && d.meta !== undefined ? ` · meta ${esc(String(d.meta))}${esc(unidade)}` : ''} ·
+                <span class="status-pill ${ativo ? 'status-visivel' : 'status-oculto'}">${ativo ? 'Visível' : 'Oculto'}</span>
+              </p>
+            </div>
+            <div class="row-actions">
+              <button class="btn-toggle editar" onclick="editarInd('${esc(d.id)}')">Editar</button>
+              <button class="btn-toggle ${ativo ? 'ocultar' : 'reativar'}" onclick="alternarAtivo('indicadores', '${esc(d.id)}', ${ativo}, carregarListaInd)">${ativo ? 'Ocultar' : 'Reativar'}</button>
+              <button class="btn-toggle excluir" onclick="excluirInd('${esc(d.id)}')">Excluir</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (e) {
+      console.error('Erro ao listar indicadores:', e);
+      el.innerHTML = `<p class="doc-meta">Não foi possível carregar a lista (${esc(e.code || e.message)}).</p>`;
+    }
+  }
+
+  // ---- Notificações recebidas ----
+  const STATUS_NOTIF = { nova: 'Nova', analise: 'Em análise', concluida: 'Concluída' };
+  let notifItens = [];
+
+  async function carregarListaNotif() {
+    const el = document.getElementById('listaNotif');
+    try {
+      const snap = await db.collection('notificacoes').get();
+      notifItens = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        .sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0));
+      renderizarListaNotif();
+    } catch (e) {
+      console.error('Erro ao listar notificações:', e);
+      el.innerHTML = `<p class="doc-meta">Não foi possível carregar (${esc(e.code || e.message)}).</p>`;
+    }
+  }
+
+  function renderizarListaNotif() {
+    const el = document.getElementById('listaNotif');
+    const filtro = document.getElementById('notifFiltro').value;
+    if (notifItens.length === 0) { el.innerHTML = '<p class="doc-meta">Nenhuma notificação recebida.</p>'; return; }
+    const itens = notifItens.filter(n => !filtro || (n.status || 'nova') === filtro);
+    const novas = notifItens.filter(n => (n.status || 'nova') === 'nova').length;
+    if (itens.length === 0) {
+      el.innerHTML = `<p class="doc-meta">${novas} nova(s) no total. Nenhuma notificação nesse status.</p>`;
+      return;
+    }
+    el.innerHTML = `<p class="doc-meta">${itens.length} notificação(ões) · ${novas} nova(s)</p>` + itens.map(n => {
+      const status = n.status || 'nova';
+      const enviada = n.criadoEm?.toDate ? n.criadoEm.toDate().toLocaleString('pt-BR') : '';
+      const dataEv = /^\d{4}-\d{2}-\d{2}$/.test(n.dataEvento || '') ? n.dataEvento.split('-').reverse().join('/') : 'não informada';
+      return `
+        <details class="notif-card notif-${esc(status)}">
+          <summary>
+            <span class="notif-tipo">${esc(n.tipo || 'Evento')}</span>
+            <span class="doc-meta">${esc(dataEv)} · ${esc(n.setor || 'setor não informado')}</span>
+            <span class="status-pill notif-pill-${esc(status)}">${esc(STATUS_NOTIF[status] || status)}</span>
+          </summary>
+          <p class="notif-desc">${esc(n.descricao)}</p>
+          <p class="doc-meta">Grau de dano: ${esc(n.dano || 'não informado')}</p>
+          <p class="doc-meta">Identificação: ${n.contato ? esc(n.contato) : 'anônima'}</p>
+          <p class="doc-meta">Recebida em ${esc(enviada)}</p>
+          <div class="row-actions">
+            ${status !== 'analise' ? `<button class="btn-toggle editar" onclick="mudarStatusNotif('${esc(n.id)}','analise')">Marcar em análise</button>` : ''}
+            ${status !== 'concluida' ? `<button class="btn-toggle reativar" onclick="mudarStatusNotif('${esc(n.id)}','concluida')">Marcar concluída</button>` : ''}
+            ${status !== 'nova' ? `<button class="btn-toggle ocultar" onclick="mudarStatusNotif('${esc(n.id)}','nova')">Voltar para nova</button>` : ''}
+            <button class="btn-toggle excluir" onclick="excluirNotif('${esc(n.id)}')">Excluir</button>
+          </div>
+        </details>
+      `;
+    }).join('');
+  }
+
+  async function mudarStatusNotif(id, status) {
+    try {
+      await db.collection('notificacoes').doc(id).update({
+        status,
+        tratadoPor: usuario.nome || usuario.email,
+        tratadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      carregarListaNotif();
+    } catch (e) {
+      alert('Erro ao atualizar: ' + e.message);
+    }
+  }
+
+  function excluirNotif(id) {
+    if (!confirm('Excluir esta notificação? Essa ação não pode ser desfeita.')) return;
+    db.collection('notificacoes').doc(id).delete()
+      .then(carregarListaNotif)
+      .catch(e => alert('Erro ao excluir: ' + e.message));
+  }
 
   // ---- Alternar ativo/oculto (reaproveitado por destaque, comunicados e POPs) ----
   async function alternarAtivo(colecao, id, estavaAtivo, recarregar) {

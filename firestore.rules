@@ -58,6 +58,40 @@ service cloud.firestore {
       allow write: if temPapel(["admin", "educacao_permanente"]);
     }
 
+    // Mural de alertas de segurança — leitura pública, escrita Qualidade/admin.
+    match /alertas/{id} {
+      allow read: if true;
+      allow write: if temPapel(["admin", "qualidade"]);
+    }
+
+    // Indicadores de qualidade — leitura pública, escrita Qualidade/admin.
+    match /indicadores/{id} {
+      allow read: if true;
+      allow write: if temPapel(["admin", "qualidade"]);
+    }
+
+    // Notificações de evento adverso.
+    // Qualquer pessoa pode ENVIAR (sem login, para permitir notificação anônima),
+    // mas ninguém pode ler, alterar ou apagar sem ser Qualidade/Direção/admin.
+    // A validação abaixo limita o tamanho e os campos do que entra.
+    match /notificacoes/{id} {
+      allow read, update, delete: if temPapel(["admin", "qualidade", "direcao"]);
+      allow create: if request.resource.data.keys().hasOnly(
+                         ["tipo", "dataEvento", "setor", "descricao", "dano", "contato", "status", "criadoEm"])
+                    && request.resource.data.keys().hasAll(
+                         ["tipo", "dataEvento", "setor", "descricao", "dano", "contato", "status", "criadoEm"])
+                    && request.resource.data.tipo is string && request.resource.data.tipo.size() <= 60
+                    && request.resource.data.dataEvento is string && request.resource.data.dataEvento.size() <= 10
+                    && request.resource.data.setor is string && request.resource.data.setor.size() <= 120
+                    && request.resource.data.descricao is string
+                    && request.resource.data.descricao.size() >= 10
+                    && request.resource.data.descricao.size() <= 3000
+                    && request.resource.data.dano is string && request.resource.data.dano.size() <= 40
+                    && request.resource.data.contato is string && request.resource.data.contato.size() <= 200
+                    && request.resource.data.status == "nova"
+                    && request.resource.data.criadoEm == request.time;
+    }
+
     // Documentos Institucionais — leitura pública, escrita Direção/admin.
     match /documentos/{id} {
       allow read: if true;

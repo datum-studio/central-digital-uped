@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qualidade e Segurança — Central Digital UPED</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">UP</div>
+      <div>
+        <h1>Qualidade e Segurança</h1>
+        <p>Segurança do paciente, indicadores e notificação de eventos</p>
+      </div>
+    </div>
+    <a class="header-card" href="index.html" style="text-decoration:none;">← Voltar para a Home</a>
+  </header>
+
+  <div id="alertasBloco"></div>
+
+  <h2 class="edu-secao">Indicadores</h2>
+  <div id="indicadoresBloco"><p class="doc-meta" style="margin:0 4px;">Carregando…</p></div>
+
+  <h2 class="edu-secao" id="notificar">Notificar um evento</h2>
+  <div class="notif-form">
+    <p class="notif-intro">
+      Use este espaço para relatar um evento adverso, um quase-erro (near miss) ou uma situação de risco.
+      Não precisa de login e a notificação pode ser anônima. O objetivo é melhorar o processo, não apontar culpados.
+      <b>Não inclua nome de paciente nem dados de prontuário.</b>
+    </p>
+
+    <label>Tipo de evento</label>
+    <select id="nTipo">
+      <option value="Evento adverso">Evento adverso (houve dano ou chegou ao paciente)</option>
+      <option value="Quase-erro (near miss)">Quase-erro (near miss): foi percebido antes de atingir o paciente</option>
+      <option value="Queda">Queda</option>
+      <option value="Erro de medicação">Erro de medicação</option>
+      <option value="Infecção">Suspeita de infecção relacionada à assistência</option>
+      <option value="Estrutura ou equipamento">Estrutura ou equipamento</option>
+      <option value="Situação de risco">Situação de risco (ainda não aconteceu)</option>
+      <option value="Outro">Outro</option>
+    </select>
+
+    <div class="aniv-data-row" style="grid-template-columns:1fr 1fr;">
+      <div><label>Data do evento</label><input type="date" id="nData"></div>
+      <div><label>Setor ou local (opcional)</label><input type="text" id="nSetor" placeholder="Ex.: Enfermaria, Emergência"></div>
+    </div>
+
+    <label>O que aconteceu</label>
+    <textarea id="nDescricao" rows="5" placeholder="Descreva o que aconteceu, onde e o que foi feito em seguida. Quanto mais claro, melhor a análise."></textarea>
+    <p class="doc-meta" id="nContador" style="margin:4px 0 0;">Mínimo de 10 caracteres.</p>
+
+    <label>Houve dano ao paciente?</label>
+    <select id="nDano">
+      <option value="Sem dano">Não houve dano</option>
+      <option value="Dano leve">Dano leve</option>
+      <option value="Dano moderado">Dano moderado</option>
+      <option value="Dano grave">Dano grave</option>
+      <option value="Não sei">Não sei dizer</option>
+      <option value="Não se aplica">Não se aplica</option>
+    </select>
+
+    <label>Quer se identificar? (opcional)</label>
+    <input type="text" id="nContato" placeholder="Nome e um contato, se quiser retorno. Deixe em branco para notificar de forma anônima">
+
+    <div class="notif-honey"><label>Não preencha este campo</label><input type="text" id="nHoney" tabindex="-1" autocomplete="off"></div>
+
+    <button id="btnEnviarNotif" class="btn-enviar" onclick="enviarNotificacao()">Enviar notificação</button>
+    <p id="msgNotif" class="admin-msg"></p>
+  </div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script>
+  const NIVEIS_TXT = { informativo: 'Informativo', atencao: 'Atenção', urgente: 'Urgente' };
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function mesBr(mes) {
+    const m = /^(\d{4})-(\d{2})$/.exec(mes || '');
+    return m ? `${m[2]}/${m[1]}` : '';
+  }
+  function fmtNum(v) {
+    return Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+  }
+  function sufixo(unidade) {
+    if (!unidade) return '';
+    return unidade === '%' ? '%' : ' ' + unidade;
+  }
+
+  // ---- Mural de alertas ----
+  db.collection('alertas').get().then(snap => {
+    const itens = snap.docs.map(d => d.data())
+      .filter(a => a.ativo !== false)
+      .sort((a, b) => (b.atualizadoEm?.seconds || 0) - (a.atualizadoEm?.seconds || 0));
+    if (itens.length === 0) return;
+    document.getElementById('alertasBloco').innerHTML =
+      '<h2 class="edu-secao" style="margin-top:0;">Alertas de segurança</h2><div class="alerta-lista">' +
+      itens.map(a => {
+        const nivel = NIVEIS_TXT[a.nivel] ? a.nivel : 'informativo';
+        const data = a.atualizadoEm?.toDate ? a.atualizadoEm.toDate().toLocaleDateString('pt-BR') : '';
+        return `
+          <div class="alerta-card alerta-${nivel}">
+            <span class="alerta-nivel">${esc(NIVEIS_TXT[nivel])}</span>
+            <p class="doc-title" style="margin:6px 0 4px;">${esc(a.titulo)}</p>
+            <p class="alerta-corpo">${esc(a.corpo)}</p>
+            ${data ? `<p class="doc-meta" style="margin:6px 0 0;">${data}</p>` : ''}
+          </div>`;
+      }).join('') + '</div>';
+  }).catch(e => console.error('Erro ao carregar alertas:', e));
+
+  // ---- Indicadores (mostra o mês mais recente de cada indicador) ----
+  db.collection('indicadores').get().then(snap => {
+    const el = document.getElementById('indicadoresBloco');
+    const itens = snap.docs.map(d => d.data()).filter(i => i.ativo !== false && i.nome && i.mes);
+    if (itens.length === 0) {
+      el.innerHTML = '<p class="doc-meta" style="margin:0 4px;">Nenhum indicador publicado ainda.</p>';
+      return;
+    }
+    // agrupa por indicador e ordena os lançamentos do mais novo para o mais antigo
+    const porNome = {};
+    itens.forEach(i => { (porNome[i.nome] = porNome[i.nome] || []).push(i); });
+    const cards = Object.keys(porNome).sort((a, b) => a.localeCompare(b, 'pt-BR')).map(nome => {
+      const serie = porNome[nome].sort((a, b) => (b.mes || '').localeCompare(a.mes || ''));
+      const at = serie[0], ant = serie[1];
+      const un = sufixo(at.unidade);
+      const temMeta = at.meta !== null && at.meta !== undefined && isFinite(at.meta);
+      const naMeta = temMeta && (at.sentido === 'menor' ? Number(at.valor) <= Number(at.meta) : Number(at.valor) >= Number(at.meta));
+      let variacao = '';
+      if (ant && isFinite(ant.valor)) {
+        const dif = Number(at.valor) - Number(ant.valor);
+        if (dif === 0) {
+          variacao = `<span class="ind-var ind-neutro">igual ao mês anterior</span>`;
+        } else {
+          const melhorou = at.sentido === 'menor' ? dif < 0 : dif > 0;
+          variacao = `<span class="ind-var ${melhorou ? 'ind-sobe' : 'ind-cai'}">${dif > 0 ? '▲' : '▼'} ${fmtNum(Math.abs(dif))}${esc(un)} vs. ${mesBr(ant.mes)}</span>`;
+        }
+      }
+      return `
+        <div class="ind-card">
+          <p class="ind-nome">${esc(nome)}</p>
+          <p class="ind-valor">${fmtNum(at.valor)}<small>${esc(un)}</small></p>
+          <p class="doc-meta" style="margin:0;">Referência: ${mesBr(at.mes)}</p>
+          ${temMeta ? `<p class="doc-meta" style="margin:0;">Meta: ${at.sentido === 'menor' ? 'até' : 'a partir de'} ${fmtNum(at.meta)}${esc(un)}</p>` : ''}
+          ${temMeta ? `<span class="status-pill ${naMeta ? 'status-visivel' : 'status-oculto'}">${naMeta ? 'Dentro da meta' : 'Fora da meta'}</span>` : ''}
+          ${variacao}
+          ${at.observacao ? `<p class="pop-desc" style="margin:4px 0 0;">${esc(at.observacao)}</p>` : ''}
+        </div>`;
+    });
+    el.innerHTML = '<div class="ind-grid">' + cards.join('') + '</div>';
+  }).catch(e => {
+    console.error('Erro ao carregar indicadores:', e);
+    document.getElementById('indicadoresBloco').innerHTML =
+      `<p class="doc-meta" style="margin:0 4px;">Não foi possível carregar (${esc(e.code || e.message)}).</p>`;
+  });
+
+  // ---- Formulário de notificação ----
+  const campoDesc = document.getElementById('nDescricao');
+  campoDesc.addEventListener('input', () => {
+    const n = campoDesc.value.trim().length;
+    document.getElementById('nContador').textContent =
+      n < 10 ? `Mínimo de 10 caracteres (faltam ${10 - n}).` : `${n} caracteres.`;
+  });
+
+  async function enviarNotificacao() {
+    const msg = document.getElementById('msgNotif');
+    const btn = document.getElementById('btnEnviarNotif');
+    const erro = t => { msg.textContent = t; msg.className = 'admin-msg err'; };
+    if (document.getElementById('nHoney').value) return; // armadilha anti-robô
+    const descricao = campoDesc.value.trim();
+    if (descricao.length < 10) return erro('Descreva o que aconteceu com um pouco mais de detalhe.');
+    if (descricao.length > 3000) return erro('O texto ficou muito longo. Resuma em até 3000 caracteres.');
+    const dados = {
+      tipo: document.getElementById('nTipo').value,
+      dataEvento: document.getElementById('nData').value || '',
+      setor: document.getElementById('nSetor').value.trim().slice(0, 120),
+      descricao,
+      dano: document.getElementById('nDano').value,
+      contato: document.getElementById('nContato').value.trim().slice(0, 200),
+      status: 'nova',
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    btn.disabled = true;
+    msg.textContent = 'Enviando…';
+    msg.className = 'admin-msg';
+    try {
+      await db.collection('notificacoes').add(dados);
+      document.querySelector('.notif-form').innerHTML = `
+        <div class="notif-ok">
+          <p class="doc-title" style="margin:0 0 6px;">Notificação enviada.</p>
+          <p class="pop-desc" style="margin:0;">Obrigado por notificar. A Qualidade e a Direção recebem o relato e fazem a análise. Nada do que você escreveu aparece nesta página.</p>
+          <button class="btn-enviar" style="margin-top:14px;" onclick="location.reload()">Enviar outra notificação</button>
+        </div>`;
+    } catch (e) {
+      console.error('Erro ao enviar notificação:', e);
+      erro('Não foi possível enviar (' + (e.code || e.message) + '). Tente novamente em alguns instantes.');
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>

@@ -67,6 +67,7 @@ destaque/{id}            → { titulo, arquivoUrl, atualizadoEm, atualizadoPor }
 aniversariantes/{id}     → { nome, dia, mes, atualizadoPor }   (editável pelo RH/admin; só dia e mês, sem ano)
 comunicados/{id}         → { titulo, corpo, data, ativo, atualizadoPor }   (já editável pelo painel: Direção)
 pops/{id}                → { titulo, categoria, versao, descricao, arquivoUrl, ativo, atualizadoEm, atualizadoPor }   (editável pelo NEP/admin; página pública pops.html)
+educacao/{id}            → { tipo (treinamento|material|certificado|link), titulo, data (AAAA-MM-DD), horario, local, publico, responsavel, descricao, arquivoUrl, ativo, atualizadoEm, atualizadoPor }   (editável pelo NEP/admin; página pública educacao.html)
 documentos/{id}          → { titulo, categoria, referencia, descricao, arquivoUrl, ativo, atualizadoEm, atualizadoPor }   (editável pela Direção/admin; página pública documentos.html)
 ```
 

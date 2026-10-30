@@ -151,3 +151,15 @@ footer{margin-top:40px;background:var(--navy);color:#fff;border-radius:16px;padd
 .pop-card .btn-block{margin-top:6px;}
 .hub-link{cursor:pointer;}
 .hub-link:focus-visible{outline:3px solid var(--teal);outline-offset:2px;}
+
+/* ---- Aniversariantes (painel e Home) ---- */
+.admin-section select{width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;font-family:'Nunito';font-size:14px;background:#fff;}
+.aniv-data-row{display:grid;grid-template-columns:110px 1fr;gap:12px;}
+.aniv-lote{margin-top:22px;background:#F8F9FC;border:1px dashed #d8dce8;border-radius:12px;padding:12px 14px;}
+.aniv-lote summary{cursor:pointer;font-family:'Fredoka';font-weight:600;color:var(--navy);}
+.aniv-lote textarea{margin-top:10px;}
+.aniv-previa{max-height:170px;overflow-y:auto;background:#fff;border:1px solid #eee;border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.6;margin-top:6px;}
+.aniv-previa-erro{border-color:#f4c4b6;color:var(--coral);}
+.row-actions .btn-toggle{margin-top:0;}
+.bday-list{max-height:230px;overflow-y:auto;padding-right:4px;}
+.pill-hoje{font-style:normal;background:var(--coral);color:#fff;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle;}

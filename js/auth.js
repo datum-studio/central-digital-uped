@@ -2,7 +2,7 @@
   Central Digital UPED — Autenticação e papéis
   ---------------------------------------------
   Cada usuário autenticado tem um documento em /usuarios/{uid} com:
-    { nome: "...", setor: "...", papel: "admin" | "nutricao" | "educacao_permanente" | "direcao" | "rh" }
+    { nome: "...", setor: "...", papel: "admin" | "nutricao" | "educacao_permanente" | "direcao" | "rh" | "qualidade" }
 
   Esses documentos de usuário são criados manualmente pelo admin no Console do
   Firebase (Firestore) depois que a pessoa faz o primeiro login — não existe
@@ -45,6 +45,8 @@ const PERMISSOES = {
   aniversariantes: ["admin", "rh"],
   pops: ["admin", "educacao_permanente"],
   educacao: ["admin", "educacao_permanente"],
+  qualidade: ["admin", "qualidade"],
+  notificacoes: ["admin", "qualidade", "direcao"],
   documentos: ["admin", "direcao"],
 };
 

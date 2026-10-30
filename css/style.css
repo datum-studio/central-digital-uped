@@ -163,3 +163,18 @@ footer{margin-top:40px;background:var(--navy);color:#fff;border-radius:16px;padd
 .row-actions .btn-toggle{margin-top:0;}
 .bday-list{max-height:230px;overflow-y:auto;padding-right:4px;}
 .pill-hoje{font-style:normal;background:var(--coral);color:#fff;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle;}
+
+/* ---- Educação Permanente ---- */
+.edu-secao{font-family:'Fredoka';color:var(--navy);font-size:17px;margin:22px 4px 10px;}
+.edu-lista{display:flex;flex-direction:column;gap:12px;}
+.edu-item{display:flex;gap:16px;background:#fff;border-radius:16px;padding:16px;box-shadow:0 4px 16px rgba(27,42,92,.06);align-items:flex-start;}
+.edu-item.edu-passado{opacity:.8;}
+.edu-data{flex:0 0 62px;text-align:center;background:var(--card-green);color:var(--card-green-b);border-radius:12px;padding:8px 0;line-height:1.1;}
+.edu-data b{display:block;font-family:'Fredoka';font-size:24px;}
+.edu-data span{font-size:11px;font-weight:800;text-transform:uppercase;}
+.edu-corpo{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+.edu-info{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--ink-soft);margin:0;}
+.edu-link{align-self:flex-start;font-weight:800;font-size:13px;color:var(--navy);text-decoration:underline;}
+.edu-historico{margin-top:22px;}
+.edu-historico summary{cursor:pointer;font-family:'Fredoka';font-weight:600;color:var(--navy);margin:0 4px 12px;}
+@media(max-width:520px){.edu-item{flex-direction:column;}.edu-data{flex:none;display:flex;gap:6px;align-items:baseline;justify-content:center;padding:6px 14px;}.edu-data b{display:inline;font-size:18px;}}

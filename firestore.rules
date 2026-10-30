@@ -52,6 +52,12 @@ service cloud.firestore {
       allow write: if temPapel(["admin", "educacao_permanente"]);
     }
 
+    // Educação Permanente (treinamentos, materiais, certificados, links) — leitura pública, escrita NEP/admin.
+    match /educacao/{id} {
+      allow read: if true;
+      allow write: if temPapel(["admin", "educacao_permanente"]);
+    }
+
     // Documentos Institucionais — leitura pública, escrita Direção/admin.
     match /documentos/{id} {
       allow read: if true;

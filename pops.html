@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocolos e POPs — Central Digital UPED</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">UP</div>
+      <div>
+        <h1>Protocolos e POPs</h1>
+        <p>Fluxos assistenciais, rotinas e procedimentos da unidade</p>
+      </div>
+    </div>
+    <a class="header-card" href="index.html" style="text-decoration:none;">← Voltar para a Home</a>
+  </header>
+
+  <div class="pops-toolbar">
+    <input type="search" id="busca" class="pops-busca" placeholder="Buscar por título, categoria ou palavra-chave..." autocomplete="off">
+    <div id="filtrosCategoria" class="pops-filtros"></div>
+  </div>
+
+  <p id="contagem" class="doc-meta" style="margin:10px 4px 16px;"></p>
+
+  <div id="listaPops" class="pops-grid">
+    <p class="doc-meta">Carregando…</p>
+  </div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script>
+  let todosPops = [];
+  let categoriaAtiva = 'Todas';
+
+  // Evita injetar HTML vindo dos documentos (título, categoria etc.)
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // Aceita só links http(s) no botão de abrir
+  function linkSeguro(url) {
+    return /^https?:\/\//i.test(url || '') ? url : '';
+  }
+
+  function normalizar(s) {
+    return String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  }
+
+  function montarFiltros() {
+    const categorias = ['Todas', ...new Set(todosPops.map(p => p.categoria).filter(Boolean))]
+      .sort((a, b) => a === 'Todas' ? -1 : b === 'Todas' ? 1 : a.localeCompare(b, 'pt-BR'));
+    document.getElementById('filtrosCategoria').innerHTML = categorias.map(c => `
+      <button class="dia-tab ${c === categoriaAtiva ? 'dia-tab-ativa' : ''}" data-cat="${esc(c)}">${esc(c)}</button>
+    `).join('');
+    document.querySelectorAll('#filtrosCategoria .dia-tab').forEach(btn => {
+      btn.addEventListener('click', () => { categoriaAtiva = btn.dataset.cat; montarFiltros(); renderizar(); });
+    });
+  }
+
+  function renderizar() {
+    const termo = normalizar(document.getElementById('busca').value.trim());
+    const filtrados = todosPops.filter(p => {
+      if (categoriaAtiva !== 'Todas' && p.categoria !== categoriaAtiva) return false;
+      if (!termo) return true;
+      return normalizar(`${p.titulo} ${p.categoria} ${p.descricao}`).includes(termo);
+    });
+
+    document.getElementById('contagem').textContent =
+      todosPops.length === 0 ? '' : `${filtrados.length} de ${todosPops.length} documento(s)`;
+
+    const el = document.getElementById('listaPops');
+    if (todosPops.length === 0) {
+      el.innerHTML = '<p class="doc-meta">Nenhum protocolo publicado ainda.</p>';
+      return;
+    }
+    if (filtrados.length === 0) {
+      el.innerHTML = '<p class="doc-meta">Nada encontrado para essa busca. Tente outra palavra ou outra categoria.</p>';
+      return;
+    }
+
+    el.innerHTML = filtrados.map(p => {
+      const link = linkSeguro(p.arquivoUrl);
+      const data = p.atualizadoEm ? p.atualizadoEm.toLocaleDateString('pt-BR') : '';
+      const dias = p.atualizadoEm ? (new Date() - p.atualizadoEm) / 86400000 : Infinity;
+      return `
+        <div class="pop-card">
+          <div class="pop-topo">
+            <span class="pop-categoria">${esc(p.categoria || 'Sem categoria')}</span>
+            ${dias <= 7 ? '<span class="badge-new">NOVO</span>' : ''}
+          </div>
+          <p class="doc-title">${esc(p.titulo)}</p>
+          ${p.descricao ? `<p class="pop-desc">${esc(p.descricao)}</p>` : ''}
+          <p class="doc-meta">${p.versao ? `Versão ${esc(p.versao)} · ` : ''}Atualizado em ${data}</p>
+          ${link
+            ? `<a class="btn-block" style="display:block;text-align:center;text-decoration:none;" href="${esc(link)}" target="_blank" rel="noopener">Abrir documento</a>`
+            : '<p class="doc-meta">Sem link disponível.</p>'}
+        </div>
+      `;
+    }).join('');
+  }
+
+  db.collection('pops').get().then(snap => {
+    todosPops = snap.docs
+      .map(doc => {
+        const d = doc.data();
+        return { ...d, atualizadoEm: d.atualizadoEm?.toDate ? d.atualizadoEm.toDate() : null };
+      })
+      .filter(p => p.ativo !== false)
+      .sort((a, b) => (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR'));
+    montarFiltros();
+    renderizar();
+  }).catch(e => {
+    console.error('Erro ao carregar POPs:', e);
+    document.getElementById('listaPops').innerHTML =
+      `<p class="doc-meta">Não foi possível carregar (${esc(e.code || e.message)}).</p>`;
+  });
+
+  document.getElementById('busca').addEventListener('input', renderizar);
+</script>
+</body>
+</html>

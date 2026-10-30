@@ -74,6 +74,40 @@
       <div id="listaComunicados">Carregando…</div>
     </div>
 
+    <!-- ÁREA: Protocolos e POPs -->
+    <div id="areaPops" class="admin-section area-detalhe" style="display:none;">
+      <a href="#" class="voltar-menu" onclick="mostrarMenu(); return false;">← Voltar ao painel</a>
+      <h3 id="popFormTitulo">📋 Protocolos e POPs</h3>
+      <label>Título</label>
+      <input type="text" id="popTitulo" placeholder="Ex.: POP — Administração de Medicamentos por Bomba de Infusão">
+      <label>Categoria</label>
+      <input type="text" id="popCategoria" list="popCategorias" placeholder="Escolha ou digite uma categoria">
+      <datalist id="popCategorias">
+        <option value="Assistencial"></option>
+        <option value="Enfermagem"></option>
+        <option value="Medicação"></option>
+        <option value="Segurança do Paciente"></option>
+        <option value="CCIH"></option>
+        <option value="Nutrição"></option>
+        <option value="Administrativo"></option>
+      </datalist>
+      <label>Versão (opcional)</label>
+      <input type="text" id="popVersao" placeholder="Ex.: 2.0">
+      <label>Descrição curta (opcional)</label>
+      <textarea id="popDescricao" rows="2" placeholder="Em uma frase, para que serve este documento"></textarea>
+      <label>Link do documento (Google Drive, com acesso de leitura liberado)</label>
+      <input type="text" id="popUrl" placeholder="https://drive.google.com/...">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button id="btnSalvarPop" onclick="salvarPop()">Publicar POP</button>
+        <button id="btnCancelarPop" onclick="limparFormPop()" style="display:none;background:#8a93a8;">Cancelar edição</button>
+      </div>
+      <p id="msgPop" class="admin-msg"></p>
+
+      <h3 style="margin-top:28px;">POPs já publicados</h3>
+      <p style="color:var(--ink-soft);font-size:13.5px;">Editar atualiza título, versão e link (a data de atualização muda sozinha). Ocultar tira da página pública sem apagar.</p>
+      <div id="listaPops">Carregando…</div>
+    </div>
+
   </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -94,6 +128,7 @@
     { area: 'cardapio', icone: '🍽️', titulo: 'Cardápio de Hoje', elId: 'areaCardapio', onAbrir: () => montarFormularioCardapio() },
     { area: 'destaque', icone: '📌', titulo: 'Documento em Destaque', elId: 'areaDestaque', onAbrir: () => carregarListaDestaques() },
     { area: 'comunicados', icone: '📢', titulo: 'UPED News (Comunicados)', elId: 'areaComunicados', onAbrir: () => carregarListaComunicados() },
+    { area: 'pops', icone: '📋', titulo: 'Protocolos e POPs', elId: 'areaPops', onAbrir: () => carregarListaPops() },
   ];
 
   let usuario = null;
@@ -228,7 +263,7 @@
             <button class="btn-toggle ${ativo ? 'ocultar' : 'reativar'}" onclick="alternarAtivo('destaque', '${doc.id}', ${ativo}, carregarListaDestaques)">
               ${ativo ? 'Ocultar' : 'Reativar'}
             </button>
-            <button class="btn-toggle excluir" onclick="excluirItem('destaque', '${doc.id}', ${JSON.stringify(d.titulo || '')}, carregarListaDestaques)">
+            <button class="btn-toggle excluir" onclick="excluirItem('destaque', '${doc.id}', ${jsArg(d.titulo || '')}, carregarListaDestaques)">
               Excluir
             </button>
             </div>
@@ -285,7 +320,7 @@
             <button class="btn-toggle ${ativo ? 'ocultar' : 'reativar'}" onclick="alternarAtivo('comunicados', '${doc.id}', ${ativo}, carregarListaComunicados)">
               ${ativo ? 'Ocultar' : 'Reativar'}
             </button>
-            <button class="btn-toggle excluir" onclick="excluirItem('comunicados', '${doc.id}', ${JSON.stringify(d.titulo || '')}, carregarListaComunicados)">
+            <button class="btn-toggle excluir" onclick="excluirItem('comunicados', '${doc.id}', ${jsArg(d.titulo || '')}, carregarListaComunicados)">
               Excluir
             </button>
             </div>
@@ -298,7 +333,124 @@
     }
   }
 
-  // ---- Alternar ativo/oculto (reaproveitado por destaque e comunicados) ----
+  // ---- Helpers de segurança para montar HTML ----
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  // Texto seguro para usar como argumento string dentro de onclick="..."
+  function jsArg(s) {
+    const limpo = String(s ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/[\r\n]+/g, ' ');
+    return "'" + esc(limpo) + "'";
+  }
+
+  // ---- Protocolos e POPs ----
+  let popsCache = {};
+  let popEditandoId = null;
+
+  function limparFormPop() {
+    ['popTitulo','popCategoria','popVersao','popDescricao','popUrl'].forEach(id => document.getElementById(id).value = '');
+    popEditandoId = null;
+    document.getElementById('btnSalvarPop').textContent = 'Publicar POP';
+    document.getElementById('btnCancelarPop').style.display = 'none';
+    document.getElementById('popFormTitulo').textContent = '📋 Protocolos e POPs';
+  }
+
+  async function salvarPop() {
+    const msg = document.getElementById('msgPop');
+    const titulo = document.getElementById('popTitulo').value.trim();
+    const categoria = document.getElementById('popCategoria').value.trim();
+    const versao = document.getElementById('popVersao').value.trim();
+    const descricao = document.getElementById('popDescricao').value.trim();
+    const arquivoUrl = document.getElementById('popUrl').value.trim();
+    if (!titulo) { msg.textContent = 'Preencha o título.'; msg.className = 'admin-msg err'; return; }
+    if (!/^https?:\/\//i.test(arquivoUrl)) {
+      msg.textContent = 'Cole um link válido, começando com http:// ou https://';
+      msg.className = 'admin-msg err';
+      return;
+    }
+    const dados = {
+      titulo, categoria, versao, descricao, arquivoUrl,
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoPor: usuario.nome || usuario.email,
+    };
+    try {
+      if (popEditandoId) {
+        await db.collection('pops').doc(popEditandoId).update(dados);
+        msg.textContent = 'POP atualizado com sucesso!';
+      } else {
+        await db.collection('pops').add({ ...dados, ativo: true });
+        msg.textContent = 'POP publicado com sucesso!';
+      }
+      msg.className = 'admin-msg ok';
+      limparFormPop();
+      carregarListaPops();
+    } catch (e) {
+      msg.textContent = 'Erro ao salvar: ' + e.message;
+      msg.className = 'admin-msg err';
+    }
+  }
+
+  function editarPop(id) {
+    const p = popsCache[id];
+    if (!p) return;
+    popEditandoId = id;
+    document.getElementById('popTitulo').value = p.titulo || '';
+    document.getElementById('popCategoria').value = p.categoria || '';
+    document.getElementById('popVersao').value = p.versao || '';
+    document.getElementById('popDescricao').value = p.descricao || '';
+    document.getElementById('popUrl').value = p.arquivoUrl || '';
+    document.getElementById('btnSalvarPop').textContent = 'Salvar alterações';
+    document.getElementById('btnCancelarPop').style.display = 'inline-block';
+    document.getElementById('popFormTitulo').textContent = '✏️ Editando POP';
+    document.getElementById('msgPop').textContent = '';
+    document.getElementById('areaPops').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function excluirPop(id) {
+    excluirItem('pops', id, popsCache[id]?.titulo || '', () => {
+      if (popEditandoId === id) limparFormPop();
+      carregarListaPops();
+    });
+  }
+
+  async function carregarListaPops() {
+    const el = document.getElementById('listaPops');
+    try {
+      const snap = await db.collection('pops').get();
+      popsCache = {};
+      const itens = snap.docs.map(doc => {
+        const d = doc.data();
+        popsCache[doc.id] = d;
+        return { id: doc.id, ...d };
+      }).sort((a, b) => (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR'));
+      if (itens.length === 0) { el.innerHTML = '<p class="doc-meta">Nenhum POP publicado ainda.</p>'; return; }
+      el.innerHTML = itens.map(d => {
+        const ativo = d.ativo !== false;
+        const data = d.atualizadoEm?.toDate ? d.atualizadoEm.toDate().toLocaleDateString('pt-BR') : '';
+        return `
+          <div class="destaque-admin-row ${ativo ? '' : 'linha-oculta'}">
+            <div>
+              <p class="doc-title" style="margin:0;">${esc(d.titulo)}</p>
+              <p class="doc-meta" style="margin:0;">
+                ${esc(d.categoria || 'Sem categoria')}${d.versao ? ' · v' + esc(d.versao) : ''} · ${data} ·
+                <span class="status-pill ${ativo ? 'status-visivel' : 'status-oculto'}">${ativo ? 'Visível' : 'Oculto'}</span>
+              </p>
+            </div>
+            <div class="row-actions">
+              <button class="btn-toggle editar" onclick="editarPop('${d.id}')">Editar</button>
+              <button class="btn-toggle ${ativo ? 'ocultar' : 'reativar'}" onclick="alternarAtivo('pops', '${d.id}', ${ativo}, carregarListaPops)">${ativo ? 'Ocultar' : 'Reativar'}</button>
+              <button class="btn-toggle excluir" onclick="excluirPop('${d.id}')">Excluir</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (e) {
+      console.error('Erro ao listar POPs:', e);
+      el.innerHTML = `<p class="doc-meta">Não foi possível carregar a lista (${esc(e.code || e.message)}).</p>`;
+    }
+  }
+
+  // ---- Alternar ativo/oculto (reaproveitado por destaque, comunicados e POPs) ----
   async function alternarAtivo(colecao, id, estavaAtivo, recarregar) {
     try {
       await db.collection(colecao).doc(id).update({ ativo: !estavaAtivo });

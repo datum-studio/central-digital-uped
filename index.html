@@ -198,10 +198,13 @@
     const el = document.getElementById('aniversariantesConteudo');
     const banner = `<div class="mes-banner">${nomesMes[mesAtual - 1]}</div>`;
     if (snap.empty) { el.innerHTML = banner + '<p class="doc-meta">Nenhum aniversariante este mês.</p>'; return; }
-    el.innerHTML = banner + snap.docs.map(doc => {
+    const diaHoje = hoje.getDate();
+    const escA = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    el.innerHTML = banner + '<div class="bday-list">' + snap.docs.map(doc => {
       const d = doc.data();
-      return `<div class="bday-item"><span>${d.nome}</span><b>${String(d.dia).padStart(2,'0')}/${String(mesAtual).padStart(2,'0')}</b></div>`;
-    }).join('');
+      const ehHoje = Number(d.dia) === diaHoje;
+      return `<div class="bday-item"><span>${escA(d.nome)}${ehHoje ? '<em class="pill-hoje">HOJE</em>' : ''}</span><b>${String(d.dia).padStart(2,'0')}/${String(mesAtual).padStart(2,'0')}</b></div>`;
+    }).join('') + '</div>';
   }).catch(e => {
     console.error('Erro ao carregar aniversariantes:', e);
     document.getElementById('aniversariantesConteudo').innerHTML = `<p class="doc-meta">Não foi possível carregar (${e.code || e.message}).</p>`;

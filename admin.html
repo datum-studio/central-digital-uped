@@ -143,6 +143,41 @@
       <div id="listaDocs">Carregando…</div>
     </div>
 
+
+    <!-- ÁREA: Aniversariantes -->
+    <div id="areaAniv" class="admin-section area-detalhe" style="display:none;">
+      <a href="#" class="voltar-menu" onclick="mostrarMenu(); return false;">← Voltar ao painel</a>
+      <h3 id="anivFormTitulo">🎂 Aniversariantes</h3>
+      <p style="color:var(--ink-soft);font-size:13.5px;">Só dia e mês são guardados (o ano de nascimento não é registrado).</p>
+      <label>Nome</label>
+      <input type="text" id="anivNome" placeholder="Ex.: Maria Santos">
+      <div class="aniv-data-row">
+        <div><label>Dia</label><input type="number" id="anivDia" min="1" max="31" placeholder="Dia"></div>
+        <div><label>Mês</label><select id="anivMes"><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button id="btnSalvarAniv" onclick="salvarAniv()">Adicionar</button>
+        <button id="btnCancelarAniv" onclick="limparFormAniv()" style="display:none;background:#8a93a8;">Cancelar edição</button>
+      </div>
+      <p id="msgAniv" class="admin-msg"></p>
+
+      <details class="aniv-lote">
+        <summary>Cadastrar vários de uma vez (colar lista)</summary>
+        <p style="color:var(--ink-soft);font-size:13px;margin:10px 0 0;">Um por linha, com nome e data no formato dia/mês. Se vier o ano, ele é ignorado. Quem já está cadastrado é pulado.</p>
+        <textarea id="anivLote" rows="6" placeholder="Maria Santos - 03/05&#10;João Silva; 15/05&#10;Ana Souza, 21/05"></textarea>
+        <div class="row-actions" style="margin-top:6px;">
+          <button onclick="previsualizarLote()">Pré-visualizar</button>
+          <button id="btnImportarLote" onclick="importarLote()" style="display:none;">Importar</button>
+        </div>
+        <div id="anivLotePrevia"></div>
+        <p id="msgLote" class="admin-msg"></p>
+      </details>
+
+      <h3 style="margin-top:28px;">Cadastrados</h3>
+      <select id="anivFiltroMes" onchange="renderizarListaAniv()"><option value="0">Todos os meses</option><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select>
+      <div id="listaAniv" style="margin-top:10px;">Carregando…</div>
+    </div>
+
   </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -165,6 +200,7 @@
     { area: 'comunicados', icone: '📢', titulo: 'UPED News (Comunicados)', elId: 'areaComunicados', onAbrir: () => carregarListaComunicados() },
     { area: 'pops', icone: '📋', titulo: 'Protocolos e POPs', elId: 'areaPops', onAbrir: () => carregarListaPops() },
     { area: 'documentos', icone: '🗂️', titulo: 'Documentos Institucionais', elId: 'areaDocs', onAbrir: () => carregarListaDocs() },
+    { area: 'aniversariantes', icone: '🎂', titulo: 'Aniversariantes', elId: 'areaAniv', onAbrir: () => carregarListaAniv() },
   ];
 
   let usuario = null;
@@ -590,6 +626,200 @@
     } catch (e) {
       console.error('Erro ao listar documentos:', e);
       el.innerHTML = `<p class="doc-meta">Não foi possível carregar a lista (${esc(e.code || e.message)}).</p>`;
+    }
+  }
+
+  // ---- Aniversariantes ----
+  const NOMES_MES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const DIAS_NO_MES = [31,29,31,30,31,30,31,31,30,31,30,31]; // fev com 29: sem ano, 29/02 é válido
+  let anivCache = [];
+  let anivEditandoId = null;
+  let loteValido = [];
+
+  function normalizarTxt(s) {
+    return String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+  }
+  function chaveAniv(nome, dia, mes) { return `${normalizarTxt(nome)}|${dia}|${mes}`; }
+  function dataValida(dia, mes) {
+    return Number.isInteger(dia) && Number.isInteger(mes) && mes >= 1 && mes <= 12 && dia >= 1 && dia <= DIAS_NO_MES[mes - 1];
+  }
+  function fmtData(dia, mes) { return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`; }
+
+  function limparFormAniv() {
+    document.getElementById('anivNome').value = '';
+    document.getElementById('anivDia').value = '';
+    document.getElementById('anivMes').value = '1';
+    anivEditandoId = null;
+    document.getElementById('btnSalvarAniv').textContent = 'Adicionar';
+    document.getElementById('btnCancelarAniv').style.display = 'none';
+    document.getElementById('anivFormTitulo').textContent = '🎂 Aniversariantes';
+  }
+
+  async function salvarAniv() {
+    const msg = document.getElementById('msgAniv');
+    const nome = document.getElementById('anivNome').value.trim().replace(/\s+/g, ' ');
+    const dia = parseInt(document.getElementById('anivDia').value, 10);
+    const mes = parseInt(document.getElementById('anivMes').value, 10);
+    if (!nome) { msg.textContent = 'Preencha o nome.'; msg.className = 'admin-msg err'; return; }
+    if (!dataValida(dia, mes)) { msg.textContent = 'Data inválida: confira o dia para esse mês.'; msg.className = 'admin-msg err'; return; }
+    const chave = chaveAniv(nome, dia, mes);
+    if (anivCache.some(a => a.id !== anivEditandoId && chaveAniv(a.nome, a.dia, a.mes) === chave)) {
+      msg.textContent = 'Essa pessoa já está cadastrada com essa data.';
+      msg.className = 'admin-msg err';
+      return;
+    }
+    const dados = { nome, dia, mes, atualizadoPor: usuario.nome || usuario.email };
+    try {
+      if (anivEditandoId) {
+        await db.collection('aniversariantes').doc(anivEditandoId).update(dados);
+        msg.textContent = 'Cadastro atualizado.';
+      } else {
+        await db.collection('aniversariantes').add(dados);
+        msg.textContent = 'Aniversariante adicionado.';
+      }
+      msg.className = 'admin-msg ok';
+      limparFormAniv();
+      carregarListaAniv();
+    } catch (e) {
+      msg.textContent = 'Erro ao salvar: ' + e.message;
+      msg.className = 'admin-msg err';
+    }
+  }
+
+  function editarAniv(id) {
+    const a = anivCache.find(x => x.id === id);
+    if (!a) return;
+    anivEditandoId = id;
+    document.getElementById('anivNome').value = a.nome;
+    document.getElementById('anivDia').value = a.dia;
+    document.getElementById('anivMes').value = String(a.mes);
+    document.getElementById('btnSalvarAniv').textContent = 'Salvar alterações';
+    document.getElementById('btnCancelarAniv').style.display = 'inline-block';
+    document.getElementById('anivFormTitulo').textContent = '✏️ Editando aniversariante';
+    document.getElementById('msgAniv').textContent = '';
+    document.getElementById('areaAniv').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async function excluirAniv(id) {
+    const a = anivCache.find(x => x.id === id);
+    if (!a) return;
+    if (!confirm(`Excluir ${a.nome} (${fmtData(a.dia, a.mes)}) da lista? Essa ação não pode ser desfeita.`)) return;
+    try {
+      await db.collection('aniversariantes').doc(id).delete();
+      if (anivEditandoId === id) limparFormAniv();
+      carregarListaAniv();
+    } catch (e) {
+      alert('Erro ao excluir: ' + e.message);
+    }
+  }
+
+  async function carregarListaAniv() {
+    const el = document.getElementById('listaAniv');
+    try {
+      const snap = await db.collection('aniversariantes').get();
+      anivCache = snap.docs.map(doc => {
+        const d = doc.data();
+        return { id: doc.id, nome: String(d.nome ?? ''), dia: Number(d.dia), mes: Number(d.mes) };
+      }).sort((a, b) => a.mes - b.mes || a.dia - b.dia || a.nome.localeCompare(b.nome, 'pt-BR'));
+      renderizarListaAniv();
+    } catch (e) {
+      console.error('Erro ao listar aniversariantes:', e);
+      el.innerHTML = `<p class="doc-meta">Não foi possível carregar a lista (${esc(e.code || e.message)}).</p>`;
+    }
+  }
+
+  function renderizarListaAniv() {
+    const el = document.getElementById('listaAniv');
+    const filtro = parseInt(document.getElementById('anivFiltroMes').value, 10);
+    if (anivCache.length === 0) { el.innerHTML = '<p class="doc-meta">Nenhum aniversariante cadastrado ainda.</p>'; return; }
+    const itens = anivCache.filter(a => filtro === 0 || a.mes === filtro);
+    if (itens.length === 0) { el.innerHTML = '<p class="doc-meta">Ninguém cadastrado nesse mês.</p>'; return; }
+    el.innerHTML = `<p class="doc-meta">${itens.length} pessoa(s)</p>` + itens.map(a => `
+      <div class="destaque-admin-row">
+        <div>
+          <p class="doc-title" style="margin:0;">${esc(a.nome)}</p>
+          <p class="doc-meta" style="margin:0;">${fmtData(a.dia, a.mes)} · ${NOMES_MES[a.mes - 1] || ''}</p>
+        </div>
+        <div class="row-actions">
+          <button class="btn-toggle editar" onclick="editarAniv('${a.id}')">Editar</button>
+          <button class="btn-toggle excluir" onclick="excluirAniv('${a.id}')">Excluir</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ---- Cadastro em lote (lista colada) ----
+  // Aceita: "Nome - 03/05", "Nome; 3/5", "Nome, 03/05/1990" (o ano, se vier, é descartado)
+  function parsearLinhaLote(linha) {
+    const l = linha.trim();
+    if (!l) return null;
+    const m = l.match(/^(.*?)[\s;,\-–—:|\t]*(\d{1,2})\s*[\/.\-]\s*(\d{1,2})(?:\s*[\/.\-]\s*\d{2,4})?\s*$/);
+    if (!m) return { erro: 'não encontrei uma data no formato dia/mês' };
+    const nome = m[1].replace(/[\s;,\-–—:|\t]+$/, '').replace(/\s+/g, ' ').trim();
+    const dia = parseInt(m[2], 10), mes = parseInt(m[3], 10);
+    if (!nome) return { erro: 'falta o nome' };
+    if (!dataValida(dia, mes)) return { erro: 'data inválida (a ordem é dia/mês)' };
+    return { nome, dia, mes };
+  }
+
+  function previsualizarLote() {
+    const linhas = document.getElementById('anivLote').value.split(/\r?\n/);
+    const vistos = new Set(anivCache.map(a => chaveAniv(a.nome, a.dia, a.mes)));
+    const novos = [], erros = [];
+    let repetidos = 0;
+    linhas.forEach((linha, i) => {
+      const r = parsearLinhaLote(linha);
+      if (!r) return;
+      if (r.erro) { erros.push(`Linha ${i + 1}: ${r.erro} — "${linha.trim()}"`); return; }
+      const k = chaveAniv(r.nome, r.dia, r.mes);
+      if (vistos.has(k)) { repetidos++; return; }
+      vistos.add(k);
+      novos.push(r);
+    });
+    loteValido = novos;
+    const previa = document.getElementById('anivLotePrevia');
+    let h = `<p class="doc-meta" style="margin:10px 0 4px;"><b>${novos.length}</b> para importar`;
+    if (repetidos) h += ` · ${repetidos} já cadastrado(s), serão pulados`;
+    if (erros.length) h += ` · <span style="color:var(--coral);">${erros.length} linha(s) com problema</span>`;
+    h += '</p>';
+    if (novos.length) {
+      h += '<div class="aniv-previa">' + novos.map(n => `<div>${esc(n.nome)} <b>${fmtData(n.dia, n.mes)}</b></div>`).join('') + '</div>';
+    }
+    if (erros.length) {
+      h += '<div class="aniv-previa aniv-previa-erro">' + erros.map(e => `<div>${esc(e)}</div>`).join('') + '</div>';
+    }
+    previa.innerHTML = h;
+    document.getElementById('btnImportarLote').style.display = novos.length ? 'inline-block' : 'none';
+    document.getElementById('btnImportarLote').textContent = `Importar ${novos.length}`;
+    document.getElementById('msgLote').textContent = '';
+  }
+
+  async function importarLote() {
+    if (!loteValido.length) return;
+    const btn = document.getElementById('btnImportarLote');
+    const msg = document.getElementById('msgLote');
+    btn.disabled = true;
+    const autor = usuario.nome || usuario.email;
+    try {
+      for (let i = 0; i < loteValido.length; i += 400) {
+        const batch = db.batch();
+        loteValido.slice(i, i + 400).forEach(p => {
+          batch.set(db.collection('aniversariantes').doc(), { nome: p.nome, dia: p.dia, mes: p.mes, atualizadoPor: autor });
+        });
+        await batch.commit();
+      }
+      msg.textContent = `${loteValido.length} aniversariante(s) importado(s).`;
+      msg.className = 'admin-msg ok';
+      document.getElementById('anivLote').value = '';
+      document.getElementById('anivLotePrevia').innerHTML = '';
+      btn.style.display = 'none';
+      loteValido = [];
+    } catch (e) {
+      msg.textContent = 'Erro ao importar: ' + e.message + ' — confira a lista abaixo antes de tentar de novo; quem já entrou será pulado.';
+      msg.className = 'admin-msg err';
+    } finally {
+      btn.disabled = false;
+      carregarListaAniv();
     }
   }
 

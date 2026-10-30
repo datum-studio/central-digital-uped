@@ -64,16 +64,16 @@ alguns minutos o site fica disponível em `https://<seu-usuario>.github.io/<repo
 usuarios/{uid}          → { nome, papel }
 cardapio/atual           → { dias: { segunda: {almoco:[...], sobremesa}, ... }, semanaInicio, atualizadoPor }
 destaque/{id}            → { titulo, arquivoUrl, atualizadoEm, atualizadoPor }
-aniversariantes/{id}     → { nome, dia, mes }   (cadastro manual no Console nesta fase)
+aniversariantes/{id}     → { nome, dia, mes, atualizadoPor }   (editável pelo RH/admin; só dia e mês, sem ano)
 comunicados/{id}         → { titulo, corpo, data, ativo, atualizadoPor }   (já editável pelo painel: Direção)
+pops/{id}                → { titulo, categoria, versao, descricao, arquivoUrl, ativo, atualizadoEm, atualizadoPor }   (editável pelo NEP/admin; página pública pops.html)
+documentos/{id}          → { titulo, categoria, referencia, descricao, arquivoUrl, ativo, atualizadoEm, atualizadoPor }   (editável pela Direção/admin; página pública documentos.html)
 ```
 
-`aniversariantes` e `comunicados` já têm leitura pronta na Home — o formulário de
-edição deles entra na **Fase 2**, junto com o restante das seções do hub.
+`aniversariantes` e `comunicados` já são editáveis pelo painel (`admin.html`).
 
 ## Próximos passos (Fase 2)
 
-- Formulários de edição para aniversariantes e comunicados
 - Seções de POPs, Documentos Institucionais, Educação Permanente, Qualidade,
   Indicadores, Banco de Ideias e Contatos
 - Painel administrativo unificado (hoje o `admin.html` já segue esse padrão,

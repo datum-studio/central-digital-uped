@@ -120,6 +120,7 @@ footer{margin-top:40px;background:var(--navy);color:#fff;border-radius:16px;padd
 .btn-toggle.ocultar{background:#FDEAEA;color:var(--coral);}
 .btn-toggle.reativar{background:#E8F5E9;color:var(--card-green-b);}
 .btn-toggle.excluir{background:var(--coral);color:#fff;}
+.btn-toggle.editar{background:#E8EEF9;color:var(--navy);}
 .status-pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;}
 .status-pill.status-visivel{background:#E8F5E9;color:var(--card-green-b);}
 .status-pill.status-oculto{background:#FDEAEA;color:var(--coral);}
@@ -134,3 +135,19 @@ footer{margin-top:40px;background:var(--navy);color:#fff;border-radius:16px;padd
 .menu-card-seta{color:var(--teal);font-size:18px;}
 .voltar-menu{display:inline-block;margin-bottom:14px;color:var(--ink-soft);font-family:'Fredoka';font-weight:600;font-size:13px;text-decoration:none;}
 .voltar-menu:hover{color:var(--navy);}
+
+/* ---- Página de POPs ---- */
+.pops-toolbar{display:flex;flex-direction:column;gap:12px;}
+.pops-busca{width:100%;padding:14px 16px;border-radius:14px;border:1px solid #e3e3e3;background:#fff;font-family:'Nunito';font-size:15px;box-shadow:0 4px 14px rgba(27,42,92,.05);}
+.pops-busca:focus{outline:2px solid var(--teal);border-color:transparent;}
+.pops-filtros{display:flex;flex-wrap:wrap;gap:6px;}
+.pops-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+@media(max-width:900px){.pops-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:520px){.pops-grid{grid-template-columns:1fr;}}
+.pop-card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 4px 16px rgba(27,42,92,.06);display:flex;flex-direction:column;gap:8px;}
+.pop-topo{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.pop-categoria{background:var(--card-green);color:var(--card-green-b);font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;}
+.pop-desc{font-size:13px;color:var(--ink-soft);margin:0;line-height:1.4;}
+.pop-card .btn-block{margin-top:6px;}
+.hub-link{cursor:pointer;}
+.hub-link:focus-visible{outline:3px solid var(--teal);outline-offset:2px;}

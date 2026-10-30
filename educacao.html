@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Educação Permanente — Central Digital UPED</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">UP</div>
+      <div>
+        <h1>Educação Permanente</h1>
+        <p>Treinamentos, materiais de apoio, certificados e cursos</p>
+      </div>
+    </div>
+    <a class="header-card" href="index.html" style="text-decoration:none;">← Voltar para a Home</a>
+  </header>
+
+  <div class="pops-toolbar">
+    <input type="search" id="busca" class="pops-busca" placeholder="Buscar por título ou palavra-chave..." autocomplete="off">
+    <div id="abas" class="pops-filtros"></div>
+  </div>
+
+  <div id="conteudo" style="margin-top:8px;"><p class="doc-meta">Carregando…</p></div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script>
+  const ABAS = [
+    { id: 'treinamento', nome: 'Treinamentos', vazio: 'Nenhum treinamento agendado.' },
+    { id: 'material', nome: 'Materiais de apoio', vazio: 'Nenhum material publicado ainda.' },
+    { id: 'certificado', nome: 'Certificados e listas', vazio: 'Nenhum certificado ou lista publicado ainda.' },
+    { id: 'link', nome: 'Cursos e links', vazio: 'Nenhuma indicação publicada ainda.' },
+  ];
+  const MESES = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+  let itens = [];
+  let abaAtiva = (ABAS.find(a => a.id === location.hash.slice(1)) || ABAS[0]).id;
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function linkSeguro(url) { return /^https?:\/\//i.test(url || '') ? url : ''; }
+  function normalizar(s) {
+    return String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  }
+  // 'YYYY-MM-DD' -> Date local (evita deslocamento de fuso)
+  function parseData(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+  }
+
+  function montarAbas() {
+    document.getElementById('abas').innerHTML = ABAS.map(a => {
+      const n = itens.filter(i => i.tipo === a.id && (a.id !== 'treinamento' || !passou(i))).length;
+      return `<button class="dia-tab ${a.id === abaAtiva ? 'dia-tab-ativa' : ''}" data-aba="${a.id}">${esc(a.nome)}${n ? ` (${n})` : ''}</button>`;
+    }).join('');
+    document.querySelectorAll('#abas .dia-tab').forEach(btn => btn.addEventListener('click', () => {
+      abaAtiva = btn.dataset.aba;
+      history.replaceState(null, '', '#' + abaAtiva);
+      montarAbas(); renderizar();
+    }));
+  }
+
+  function passou(i) {
+    const d = parseData(i.data);
+    if (!d) return false;
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    return d < hoje;
+  }
+
+  function cardTreinamento(i, passado) {
+    const d = parseData(i.data);
+    const link = linkSeguro(i.arquivoUrl);
+    const info = [i.horario && 'Horário: ' + i.horario, i.local && 'Local: ' + i.local,
+                  i.publico && 'Público: ' + i.publico, i.responsavel && 'Responsável: ' + i.responsavel]
+                 .filter(Boolean).map(t => `<span>${esc(t)}</span>`).join('');
+    return `
+      <div class="edu-item ${passado ? 'edu-passado' : ''}">
+        <div class="edu-data"><b>${d ? String(d.getDate()).padStart(2, '0') : '--'}</b><span>${d ? MESES[d.getMonth()] : ''}</span></div>
+        <div class="edu-corpo">
+          <p class="doc-title" style="margin:0;">${esc(i.titulo)}</p>
+          ${i.descricao ? `<p class="pop-desc">${esc(i.descricao)}</p>` : ''}
+          ${info ? `<p class="edu-info">${info}</p>` : ''}
+          ${link ? `<a class="edu-link" href="${esc(link)}" target="_blank" rel="noopener">Mais informações</a>` : ''}
+        </div>
+      </div>`;
+  }
+
+  function cardArquivo(i) {
+    const link = linkSeguro(i.arquivoUrl);
+    const d = parseData(i.data);
+    const dias = i.atualizadoEm ? (new Date() - i.atualizadoEm) / 86400000 : Infinity;
+    return `
+      <div class="pop-card">
+        <div class="pop-topo">
+          <span class="pop-categoria">${esc(i.tipo === 'certificado' ? 'Certificado' : i.tipo === 'link' ? 'Curso / link' : 'Material')}</span>
+          ${dias <= 7 ? '<span class="badge-new">NOVO</span>' : ''}
+        </div>
+        <p class="doc-title">${esc(i.titulo)}</p>
+        ${i.descricao ? `<p class="pop-desc">${esc(i.descricao)}</p>` : ''}
+        ${d ? `<p class="doc-meta">Treinamento de ${d.toLocaleDateString('pt-BR')}</p>` : ''}
+        ${link
+          ? `<a class="btn-block" style="display:block;text-align:center;text-decoration:none;" href="${esc(link)}" target="_blank" rel="noopener">${i.tipo === 'link' ? 'Acessar' : 'Abrir'}</a>`
+          : '<p class="doc-meta">Sem link disponível.</p>'}
+      </div>`;
+  }
+
+  function renderizar() {
+    const termo = normalizar(document.getElementById('busca').value.trim());
+    const aba = ABAS.find(a => a.id === abaAtiva);
+    const el = document.getElementById('conteudo');
+    const doTipo = itens.filter(i => i.tipo === abaAtiva);
+    const lista = doTipo.filter(i => !termo || normalizar(`${i.titulo} ${i.descricao} ${i.local} ${i.responsavel} ${i.publico}`).includes(termo));
+
+    if (doTipo.length === 0) { el.innerHTML = `<p class="doc-meta" style="margin:14px 4px;">${aba.vazio}</p>`; return; }
+    if (lista.length === 0) { el.innerHTML = '<p class="doc-meta" style="margin:14px 4px;">Nada encontrado para essa busca.</p>'; return; }
+
+    if (abaAtiva === 'treinamento') {
+      const proximos = lista.filter(i => !passou(i)).sort((a, b) => a.data.localeCompare(b.data));
+      const realizados = lista.filter(passou).sort((a, b) => b.data.localeCompare(a.data));
+      let h = '<h2 class="edu-secao">Próximos treinamentos</h2>';
+      h += proximos.length
+        ? '<div class="edu-lista">' + proximos.map(i => cardTreinamento(i, false)).join('') + '</div>'
+        : '<p class="doc-meta" style="margin:0 4px;">Nenhum treinamento agendado no momento.</p>';
+      if (realizados.length) {
+        h += `<details class="edu-historico"${termo ? ' open' : ''}><summary>Já realizados (${realizados.length})</summary><div class="edu-lista">` +
+             realizados.map(i => cardTreinamento(i, true)).join('') + '</div></details>';
+      }
+      el.innerHTML = h;
+    } else {
+      const ord = [...lista].sort((a, b) => (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR'));
+      el.innerHTML = '<div class="pops-grid" style="margin-top:14px;">' + ord.map(cardArquivo).join('') + '</div>';
+    }
+  }
+
+  db.collection('educacao').get().then(snap => {
+    itens = snap.docs.map(doc => {
+      const d = doc.data();
+      return { ...d, atualizadoEm: d.atualizadoEm?.toDate ? d.atualizadoEm.toDate() : null };
+    }).filter(i => i.ativo !== false && ABAS.some(a => a.id === i.tipo));
+    montarAbas();
+    renderizar();
+  }).catch(e => {
+    console.error('Erro ao carregar Educação Permanente:', e);
+    document.getElementById('conteudo').innerHTML = `<p class="doc-meta">Não foi possível carregar (${esc(e.code || e.message)}).</p>`;
+  });
+
+  document.getElementById('busca').addEventListener('input', renderizar);
+  montarAbas();
+</script>
+</body>
+</html>

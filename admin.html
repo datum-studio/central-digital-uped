@@ -108,6 +108,41 @@
       <div id="listaPops">Carregando…</div>
     </div>
 
+
+    <!-- ÁREA: Documentos Institucionais -->
+    <div id="areaDocs" class="admin-section area-detalhe" style="display:none;">
+      <a href="#" class="voltar-menu" onclick="mostrarMenu(); return false;">← Voltar ao painel</a>
+      <h3 id="docFormTitulo">🗂️ Documentos Institucionais</h3>
+      <label>Título</label>
+      <input type="text" id="docTitulo" placeholder="Ex.: Regimento Interno da UPED">
+      <label>Categoria</label>
+      <input type="text" id="docCategoria" list="docCategorias" placeholder="Escolha ou digite uma categoria">
+      <datalist id="docCategorias">
+        <option value="Normas"></option>
+        <option value="Regimentos"></option>
+        <option value="Organograma"></option>
+        <option value="Memorandos"></option>
+        <option value="Ofícios"></option>
+        <option value="Formulários"></option>
+        <option value="Modelos"></option>
+      </datalist>
+      <label>Referência (opcional)</label>
+      <input type="text" id="docReferencia" placeholder="Ex.: Portaria 12/2026, versão 2">
+      <label>Descrição curta (opcional)</label>
+      <textarea id="docDescricao" rows="2" placeholder="Em uma frase, do que trata este documento"></textarea>
+      <label>Link do documento (Google Drive, com acesso de leitura liberado)</label>
+      <input type="text" id="docUrl" placeholder="https://drive.google.com/...">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button id="btnSalvarDoc" onclick="salvarDoc()">Publicar documento</button>
+        <button id="btnCancelarDoc" onclick="limparFormDoc()" style="display:none;background:#8a93a8;">Cancelar edição</button>
+      </div>
+      <p id="msgDoc" class="admin-msg"></p>
+
+      <h3 style="margin-top:28px;">Documentos já publicados</h3>
+      <p style="color:var(--ink-soft);font-size:13.5px;">Editar atualiza título, referência e link (a data de atualização muda sozinha). Ocultar tira da página pública sem apagar.</p>
+      <div id="listaDocs">Carregando…</div>
+    </div>
+
   </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -129,6 +164,7 @@
     { area: 'destaque', icone: '📌', titulo: 'Documento em Destaque', elId: 'areaDestaque', onAbrir: () => carregarListaDestaques() },
     { area: 'comunicados', icone: '📢', titulo: 'UPED News (Comunicados)', elId: 'areaComunicados', onAbrir: () => carregarListaComunicados() },
     { area: 'pops', icone: '📋', titulo: 'Protocolos e POPs', elId: 'areaPops', onAbrir: () => carregarListaPops() },
+    { area: 'documentos', icone: '🗂️', titulo: 'Documentos Institucionais', elId: 'areaDocs', onAbrir: () => carregarListaDocs() },
   ];
 
   let usuario = null;
@@ -446,6 +482,113 @@
       }).join('');
     } catch (e) {
       console.error('Erro ao listar POPs:', e);
+      el.innerHTML = `<p class="doc-meta">Não foi possível carregar a lista (${esc(e.code || e.message)}).</p>`;
+    }
+  }
+
+  // ---- Documentos Institucionais ----
+  let docsCache = {};
+  let docEditandoId = null;
+
+  function limparFormDoc() {
+    ['docTitulo','docCategoria','docReferencia','docDescricao','docUrl'].forEach(id => document.getElementById(id).value = '');
+    docEditandoId = null;
+    document.getElementById('btnSalvarDoc').textContent = 'Publicar documento';
+    document.getElementById('btnCancelarDoc').style.display = 'none';
+    document.getElementById('docFormTitulo').textContent = '🗂️ Documentos Institucionais';
+  }
+
+  async function salvarDoc() {
+    const msg = document.getElementById('msgDoc');
+    const titulo = document.getElementById('docTitulo').value.trim();
+    const categoria = document.getElementById('docCategoria').value.trim();
+    const referencia = document.getElementById('docReferencia').value.trim();
+    const descricao = document.getElementById('docDescricao').value.trim();
+    const arquivoUrl = document.getElementById('docUrl').value.trim();
+    if (!titulo) { msg.textContent = 'Preencha o título.'; msg.className = 'admin-msg err'; return; }
+    if (!/^https?:\/\//i.test(arquivoUrl)) {
+      msg.textContent = 'Cole um link válido, começando com http:// ou https://';
+      msg.className = 'admin-msg err';
+      return;
+    }
+    const dados = {
+      titulo, categoria, referencia, descricao, arquivoUrl,
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoPor: usuario.nome || usuario.email,
+    };
+    try {
+      if (docEditandoId) {
+        await db.collection('documentos').doc(docEditandoId).update(dados);
+        msg.textContent = 'Documento atualizado com sucesso!';
+      } else {
+        await db.collection('documentos').add({ ...dados, ativo: true });
+        msg.textContent = 'Documento publicado com sucesso!';
+      }
+      msg.className = 'admin-msg ok';
+      limparFormDoc();
+      carregarListaDocs();
+    } catch (e) {
+      msg.textContent = 'Erro ao salvar: ' + e.message;
+      msg.className = 'admin-msg err';
+    }
+  }
+
+  function editarDoc(id) {
+    const p = docsCache[id];
+    if (!p) return;
+    docEditandoId = id;
+    document.getElementById('docTitulo').value = p.titulo || '';
+    document.getElementById('docCategoria').value = p.categoria || '';
+    document.getElementById('docReferencia').value = p.referencia || '';
+    document.getElementById('docDescricao').value = p.descricao || '';
+    document.getElementById('docUrl').value = p.arquivoUrl || '';
+    document.getElementById('btnSalvarDoc').textContent = 'Salvar alterações';
+    document.getElementById('btnCancelarDoc').style.display = 'inline-block';
+    document.getElementById('docFormTitulo').textContent = '✏️ Editando documento';
+    document.getElementById('msgDoc').textContent = '';
+    document.getElementById('areaDocs').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function excluirDoc(id) {
+    excluirItem('documentos', id, docsCache[id]?.titulo || '', () => {
+      if (docEditandoId === id) limparFormDoc();
+      carregarListaDocs();
+    });
+  }
+
+  async function carregarListaDocs() {
+    const el = document.getElementById('listaDocs');
+    try {
+      const snap = await db.collection('documentos').get();
+      docsCache = {};
+      const itens = snap.docs.map(doc => {
+        const d = doc.data();
+        docsCache[doc.id] = d;
+        return { id: doc.id, ...d };
+      }).sort((a, b) => (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR'));
+      if (itens.length === 0) { el.innerHTML = '<p class="doc-meta">Nenhum documento publicado ainda.</p>'; return; }
+      el.innerHTML = itens.map(d => {
+        const ativo = d.ativo !== false;
+        const data = d.atualizadoEm?.toDate ? d.atualizadoEm.toDate().toLocaleDateString('pt-BR') : '';
+        return `
+          <div class="destaque-admin-row ${ativo ? '' : 'linha-oculta'}">
+            <div>
+              <p class="doc-title" style="margin:0;">${esc(d.titulo)}</p>
+              <p class="doc-meta" style="margin:0;">
+                ${esc(d.categoria || 'Sem categoria')}${d.referencia ? ' · ref. ' + esc(d.referencia) : ''} · ${data} ·
+                <span class="status-pill ${ativo ? 'status-visivel' : 'status-oculto'}">${ativo ? 'Visível' : 'Oculto'}</span>
+              </p>
+            </div>
+            <div class="row-actions">
+              <button class="btn-toggle editar" onclick="editarDoc('${d.id}')">Editar</button>
+              <button class="btn-toggle ${ativo ? 'ocultar' : 'reativar'}" onclick="alternarAtivo('documentos', '${d.id}', ${ativo}, carregarListaDocs)">${ativo ? 'Ocultar' : 'Reativar'}</button>
+              <button class="btn-toggle excluir" onclick="excluirDoc('${d.id}')">Excluir</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (e) {
+      console.error('Erro ao listar documentos:', e);
       el.innerHTML = `<p class="doc-meta">Não foi possível carregar a lista (${esc(e.code || e.message)}).</p>`;
     }
   }
